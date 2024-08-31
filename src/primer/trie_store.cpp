@@ -1,30 +1,67 @@
 #include "primer/trie_store.h"
+#include <optional>
+#include <utility>
 #include "common/exception.h"
+#include "primer/trie.h"
 
 namespace bustub {
 
 template <class T>
 auto TrieStore::Get(std::string_view key) -> std::optional<ValueGuard<T>> {
+  root_lock_.lock();
+  Trie tree = root_;
+  root_lock_.unlock();
+  const T *valur_ptr = tree.Get<T>(key);
+  if (valur_ptr != nullptr) {
+    return ValueGuard<T>(tree, *valur_ptr);
+  }
+  return std::nullopt;
   // Pseudo-code:
   // (1) Take the root lock, get the root, and release the root lock. Don't lookup the value in the
   //     trie while holding the root lock.
   // (2) Lookup the value in the trie.
   // (3) If the value is found, return a ValueGuard object that holds a reference to the value and the
   //     root. Otherwise, return std::nullopt.
-  throw NotImplementedException("TrieStore::Get is not implemented.");
+  // throw NotImplementedException("TrieStore::Get is not implemented.");
 }
 
 template <class T>
 void TrieStore::Put(std::string_view key, T value) {
+  write_lock_.lock();
+
+  root_lock_.lock();
+  Trie tree = root_;
+  root_lock_.unlock();
+
+  Trie new_trie = tree.Put<T>(key, std::move(value));
+
+  root_lock_.lock();
+  root_ = std::move(new_trie);
+  root_lock_.unlock();
+
+  write_lock_.unlock();
   // You will need to ensure there is only one writer at a time. Think of how you can achieve this.
   // The logic should be somehow similar to `TrieStore::Get`.
-  throw NotImplementedException("TrieStore::Put is not implemented.");
+  // throw NotImplementedException("TrieStore::Put is not implemented.");
 }
 
 void TrieStore::Remove(std::string_view key) {
+  write_lock_.lock();
+
+  root_lock_.lock();
+  Trie tree = root_;
+  root_lock_.unlock();
+
+  Trie new_trie = tree.Remove(key);
+
+  root_lock_.lock();
+  root_ = std::move(new_trie);
+  root_lock_.unlock();
+
+  write_lock_.unlock();
   // You will need to ensure there is only one writer at a time. Think of how you can achieve this.
   // The logic should be somehow similar to `TrieStore::Get`.
-  throw NotImplementedException("TrieStore::Remove is not implemented.");
+  // throw NotImplementedException("TrieStore::Remove is not implemented.");
 }
 
 // Below are explicit instantiation of template functions.
