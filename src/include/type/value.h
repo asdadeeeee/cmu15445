@@ -77,6 +77,8 @@ class Value {
   auto CheckInteger() const -> bool;
   auto CheckComparable(const Value &o) const -> bool;
 
+  auto CheckVarchar() const -> bool;
+
   // Get the type of this value
   inline auto GetTypeId() const -> TypeId { return type_id_; }
 

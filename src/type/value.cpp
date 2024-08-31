@@ -298,6 +298,17 @@ auto Value::CheckComparable(const Value &o) const -> bool {
   return false;
 }
 
+// TODO(zhouzj): 待添加其他类型
+auto Value::CheckVarchar() const -> bool {
+  switch (GetTypeId()) {
+    case TypeId::VARCHAR:
+      return true;
+    default:
+      break;
+  }
+  return false;
+}
+
 auto Value::CheckInteger() const -> bool {
   switch (GetTypeId()) {
     case TypeId::TINYINT:
