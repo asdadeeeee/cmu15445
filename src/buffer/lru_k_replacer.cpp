@@ -51,7 +51,7 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
   size_t max_distance = 0;
   size_t min_history_size = k_;
   bool if_found = false;
-  frame_id_t evict_frame_id;
+  frame_id_t evict_frame_id = 0;
   for (auto pair : node_store_) {
     if (pair.second.GetEvictable()) {
       if_found = true;
@@ -98,9 +98,9 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
   std::lock_guard<std::mutex> lock(latch_);
   auto iter = node_store_.find(frame_id);
   if (iter != node_store_.end()) {
-    if (iter->second.GetEvictable() == false && set_evictable == true) {
+    if (!iter->second.GetEvictable() && set_evictable) {
       curr_size_.fetch_add(1);
-    } else if (iter->second.GetEvictable() == true && set_evictable == false) {
+    } else if (iter->second.GetEvictable() && !set_evictable) {
       curr_size_.fetch_sub(1);
     }
     iter->second.SetEvictable(set_evictable);
