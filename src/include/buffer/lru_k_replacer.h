@@ -12,6 +12,9 @@
 
 #pragma once
 
+#include <pthread.h>
+#include <atomic>
+#include <cstddef>
 #include <limits>
 #include <list>
 #include <mutex>  // NOLINT
@@ -26,14 +29,31 @@ namespace bustub {
 enum class AccessType { Unknown = 0, Lookup, Scan, Index };
 
 class LRUKNode {
+ public:
+  LRUKNode(size_t initial_timestamp, size_t k, bool is_evictable = false) : k_(k), is_evictable_(is_evictable) {
+    Access(initial_timestamp);
+  }
+
+  void Access(size_t timestamp);
+
+  void SetEvictable(bool evivtable) { is_evictable_ = evivtable; }
+
+  auto GetEvictable() -> bool { return is_evictable_; }
+
+  void RemoveFromReplacer();
+
+  auto GetHistorySize() -> size_t { return history_.size(); }
+
+  auto GetEarlyHistory() -> size_t;
+
  private:
   /** History of last seen K timestamps of this page. Least recent timestamp stored in front. */
   // Remove maybe_unused if you start using them. Feel free to change the member variables as you want.
 
-  [[maybe_unused]] std::list<size_t> history_;
-  [[maybe_unused]] size_t k_;
+  std::list<size_t> history_;
+  size_t k_;
+  bool is_evictable_{false};
   [[maybe_unused]] frame_id_t fid_;
-  [[maybe_unused]] bool is_evictable_{false};
 };
 
 /**
@@ -147,15 +167,17 @@ class LRUKReplacer {
    */
   auto Size() -> size_t;
 
+  auto IfFrameIdValid(frame_id_t frame_id) -> bool;
+
  private:
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
-  [[maybe_unused]] std::unordered_map<frame_id_t, LRUKNode> node_store_;
-  [[maybe_unused]] size_t current_timestamp_{0};
-  [[maybe_unused]] size_t curr_size_{0};
-  [[maybe_unused]] size_t replacer_size_;
-  [[maybe_unused]] size_t k_;
-  [[maybe_unused]] std::mutex latch_;
+  std::unordered_map<frame_id_t, LRUKNode> node_store_;
+  std::atomic<size_t> current_timestamp_{0};
+  std::atomic<size_t> curr_size_{0};  // 当前evcitable size
+  size_t replacer_size_;              // node_store_ 的max size
+  size_t k_;
+  std::mutex latch_;
 };
 
 }  // namespace bustub
