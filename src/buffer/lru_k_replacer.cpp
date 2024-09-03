@@ -39,7 +39,7 @@ auto LRUKNode::GetEarlyHistory() -> size_t {
 }
 
 auto LRUKReplacer::IfFrameIdValid(const frame_id_t frame_id) -> bool {
-  return frame_id <= static_cast<int32_t>(replacer_size_) && frame_id > 0;
+  return frame_id < static_cast<int32_t>(replacer_size_) && frame_id >= 0;
 }
 
 LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_frames), k_(k) {
@@ -47,6 +47,9 @@ LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_fra
 }
 
 auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
+  if (Size() == 0) {
+    return false;
+  }
   std::lock_guard<std::mutex> lock(latch_);
   size_t max_distance = 0;
   size_t min_history_size = k_;

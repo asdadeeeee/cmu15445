@@ -13,9 +13,9 @@
 #pragma once
 
 #include <future>  // NOLINT
+#include <memory>
 #include <optional>
 #include <thread>  // NOLINT
-
 #include "common/channel.h"
 #include "storage/disk/disk_manager.h"
 
@@ -91,5 +91,8 @@ class DiskScheduler {
   Channel<std::optional<DiskRequest>> request_queue_;
   /** The background thread responsible for issuing scheduled requests to the disk manager. */
   std::optional<std::thread> background_thread_;
+
+ private:
+  void ProcessRequest(const std::shared_ptr<DiskRequest> &r);
 };
 }  // namespace bustub

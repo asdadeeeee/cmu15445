@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "storage/disk/disk_scheduler.h"
+#include <utility>
 #include "common/exception.h"
 #include "storage/disk/disk_manager.h"
 
@@ -34,20 +35,28 @@ DiskScheduler::~DiskScheduler() {
   }
 }
 
-void DiskScheduler::Schedule(DiskRequest r) {
-  if (r.is_write_) {
-    disk_manager_->WritePage(r.page_id_, r.data_);
-  } else {
-    disk_manager_->ReadPage(r.page_id_, r.data_);
-  }
-  r.callback_.set_value(true);
+void DiskScheduler::Schedule(DiskRequest r) { request_queue_.Put(std::move(r)); }
+
+void DiskScheduler::ProcessRequest(const std::shared_ptr<DiskRequest> &r) {
+  // 添加正在写的pageID vector 解决写后读一致性
+
+  std::thread t([this, r]() {  // 使用智能指针复制捕获，自动管理生命周期
+    if (r->is_write_) {
+      disk_manager_->WritePage(r->page_id_, r->data_);
+    } else {
+      disk_manager_->ReadPage(r->page_id_, r->data_);
+    }
+    r->callback_.set_value(true);
+  });
+  t.detach();  // 分离新创建的线程
 }
 
 void DiskScheduler::StartWorkerThread() {
   while (true) {
     auto request = request_queue_.Get();
     if (request.has_value()) {
-      Schedule(std::move(*request));
+      auto request_ptr = std::make_shared<DiskRequest>(std::move(*request));  // 创建智能指针
+      ProcessRequest(request_ptr);                                            // 传递智能指针
     } else {
       break;
     }
