@@ -15,7 +15,9 @@
 #include <future>  // NOLINT
 #include <memory>
 #include <optional>
+#include <set>
 #include <thread>  // NOLINT
+#include <vector>
 #include "common/channel.h"
 #include "storage/disk/disk_manager.h"
 
@@ -93,6 +95,8 @@ class DiskScheduler {
   std::optional<std::thread> background_thread_;
 
  private:
+  std::set<page_id_t> writing_pages_;
   void ProcessRequest(const std::shared_ptr<DiskRequest> &r);
+  std::mutex wait_lock_;
 };
 }  // namespace bustub

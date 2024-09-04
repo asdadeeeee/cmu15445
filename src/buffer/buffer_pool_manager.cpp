@@ -12,6 +12,7 @@
 
 #include "buffer/buffer_pool_manager.h"
 #include <optional>
+#include <utility>
 
 #include "common/exception.h"
 #include "common/macros.h"
@@ -63,7 +64,7 @@ auto BufferPoolManager::GetPreparedFrame(frame_id_t *prepared_frame_id) -> bool 
       disk_scheduler_->Schedule({/*is_write=*/true, pages_[*prepared_frame_id].GetData(),
                                  pages_[*prepared_frame_id].GetPageId(), std::move(promise)});
       if (!future.get()) {
-        throw Exception("GetPreparedFrame Schedule failed");
+        throw Exception("FetchPage Schedule failed");
       }
       pages_[*prepared_frame_id].is_dirty_ = false;
     }
@@ -159,7 +160,7 @@ auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool {
     disk_scheduler_->Schedule(
         {/*is_write=*/true, pages_[frame_id].GetData(), pages_[frame_id].GetPageId(), std::move(promise)});
     if (!future.get()) {
-      throw Exception("FlushPage Schedule failed");
+      throw Exception("FetchPage Schedule failed");
     }
     pages_[frame_id].is_dirty_ = false;
     return true;
@@ -185,6 +186,7 @@ auto BufferPoolManager::DeletePage(page_id_t page_id) -> bool {
     }
     pages_[frame_id].ResetMemory();
     pages_[frame_id].page_id_ = INVALID_PAGE_ID;
+    pages_[frame_id].is_dirty_ = false;
     replacer_->Remove(frame_id);
     free_list_.emplace_back(frame_id);
     DeallocatePage(page_id);
