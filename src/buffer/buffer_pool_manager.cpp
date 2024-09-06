@@ -31,7 +31,6 @@ BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager
   // we allocate a consecutive memory space for the buffer pool
   pages_ = new Page[pool_size_];
   replacer_ = std::make_unique<LRUKReplacer>(pool_size, replacer_k);
-
   // Initially, every page is in the free list.
   for (size_t i = 0; i < pool_size_; ++i) {
     free_list_.emplace_back(static_cast<int>(i));
@@ -93,7 +92,7 @@ auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
   return &pages_[prepared_frame_id];
 }
 
-auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType access_type) -> Page * {
+auto BufferPoolManager::FetchPage(page_id_t page_id, AccessType access_type) -> Page * {
   if (page_id == INVALID_PAGE_ID) {
     throw Exception("INVALID_PAGE_ID");
   }
@@ -123,13 +122,11 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
   }
   replacer_->SetEvictable(prepared_frame_id, false);
   pages_[prepared_frame_id].pin_count_++;
-
-  replacer_->RecordAccess(prepared_frame_id);
-
+  replacer_->RecordAccess(prepared_frame_id, access_type);
   return &pages_[prepared_frame_id];
 }
 
-auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unused]] AccessType access_type) -> bool {
+auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, AccessType access_type) -> bool {
   std::lock_guard<std::mutex> lock(latch_);
   auto iter = page_table_.find(page_id);
 

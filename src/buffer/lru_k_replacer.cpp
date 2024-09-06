@@ -21,11 +21,13 @@
 
 namespace bustub {
 
-void LRUKNode::Access(size_t timestamp) {
-  if (history_.size() == k_ && !history_.empty()) {
-    history_.pop_front();
+void LRUKNode::Access(size_t timestamp, AccessType access_type) {
+  if (access_type != AccessType::Scan) {
+    if (history_.size() == k_ && !history_.empty()) {
+      history_.pop_front();
+    }
+    history_.push_back(timestamp);
   }
-  history_.push_back(timestamp);
 }
 
 void LRUKNode::PrintHistory() {
@@ -96,7 +98,7 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
   return if_found;
 }
 
-void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType access_type) {
+void LRUKReplacer::RecordAccess(frame_id_t frame_id, AccessType access_type) {
   if (!IfFrameIdValid(frame_id)) {
     throw bustub::Exception(fmt::format("FrameId {} Invalid", frame_id));
   }
@@ -107,12 +109,12 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
   if (iter == node_store_.end()) {
     LRUKNode new_node{current_timestamp_, k_};
     // printf("after RecordAccess frame id = %d ,History = ", frame_id);
-    new_node.PrintHistory();
+    // new_node.PrintHistory();
     node_store_.emplace(frame_id, std::move(new_node));
   } else {
-    iter->second.Access(current_timestamp_);
+    iter->second.Access(current_timestamp_, access_type);
     // printf("after RecordAccess frame id = %d ,History = ", frame_id);
-    iter->second.PrintHistory();
+    // iter->second.PrintHistory();
   }
   // printf("after RecordAccess frame id = %d size = %zu\n", frame_id, Size());
 }

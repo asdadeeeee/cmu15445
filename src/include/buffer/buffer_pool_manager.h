@@ -195,9 +195,6 @@ class BufferPoolManager {
   /** This latch protects shared data structures. We recommend updating this comment to describe what it protects. */
   std::mutex latch_;
 
-  Channel<std::optional<std::future<bool>>> future_queue_;
-  std::optional<std::thread> process_future_thread_;
-
   /**
    * @brief Allocate a page on disk. Caller should acquire the latch before calling this function.
    * @return the id of the allocated page
