@@ -24,7 +24,6 @@ template <typename K, typename V, typename KC>
 void ExtendibleHTableBucketPage<K, V, KC>::Init(uint32_t max_size) {
   size_ = 0;
   max_size_ = max_size;
-  memset(array_, 0, sizeof(array_));
   // throw NotImplementedException("ExtendibleHTableBucketPage not implemented");
 }
 

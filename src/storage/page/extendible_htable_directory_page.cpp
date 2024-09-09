@@ -30,7 +30,7 @@ void ExtendibleHTableDirectoryPage::Init(uint32_t max_depth) {
   max_depth_ = max_depth;
   global_depth_ = 0;
   memset(local_depths_, 0, sizeof(local_depths_));
-  memset(bucket_page_ids_, -1, sizeof(bucket_page_ids_));
+  memset(bucket_page_ids_, INVALID_PAGE_ID, sizeof(bucket_page_ids_));
   // throw NotImplementedException("ExtendibleHTableDirectoryPage is not implemented");
 }
 
