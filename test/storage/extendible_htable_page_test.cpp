@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cstdio>
 #include <memory>
 #include <thread>  // NOLINT
 #include <vector>
@@ -29,7 +30,7 @@
 namespace bustub {
 
 // NOLINTNEXTLINE
-TEST(ExtendibleHTableTest, DISABLED_BucketPageSampleTest) {
+TEST(ExtendibleHTableTest, BucketPageSampleTest) {
   auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
   auto bpm = std::make_unique<BufferPoolManager>(5, disk_mgr.get());
 
@@ -67,6 +68,7 @@ TEST(ExtendibleHTableTest, DISABLED_BucketPageSampleTest) {
     for (unsigned i = 0; i < 10; i++) {
       if (i % 2 == 1) {
         index_key.SetFromInteger(i);
+        printf("%ld\n", index_key.ToString());
         ASSERT_TRUE(bucket_page->Remove(index_key, comparator));
       }
     }
@@ -87,7 +89,7 @@ TEST(ExtendibleHTableTest, DISABLED_BucketPageSampleTest) {
 }
 
 // NOLINTNEXTLINE
-TEST(ExtendibleHTableTest, DISABLED_HeaderDirectoryPageSampleTest) {
+TEST(ExtendibleHTableTest, HeaderDirectoryPageSampleTest) {
   auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
   auto bpm = std::make_unique<BufferPoolManager>(5, disk_mgr.get());
 
