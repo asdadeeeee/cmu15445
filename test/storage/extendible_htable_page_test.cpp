@@ -68,7 +68,6 @@ TEST(ExtendibleHTableTest, BucketPageSampleTest) {
     for (unsigned i = 0; i < 10; i++) {
       if (i % 2 == 1) {
         index_key.SetFromInteger(i);
-        printf("%ld\n", index_key.ToString());
         ASSERT_TRUE(bucket_page->Remove(index_key, comparator));
       }
     }
