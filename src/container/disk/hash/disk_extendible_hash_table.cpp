@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <elf.h>
 #include <cstdint>
 #include <iostream>
 #include <string>
