@@ -174,6 +174,9 @@ class ExtendibleHTableDirectoryPage {
    */
   void DecrLocalDepth(uint32_t bucket_idx);
 
+  auto GetActSplitIndex(uint32_t bucket_idx) const -> uint32_t;
+
+  // auto GetActSplitIndex(uint32_t bucket_idx) const -> uint32_t;
   /**
    * VerifyIntegrity
    *

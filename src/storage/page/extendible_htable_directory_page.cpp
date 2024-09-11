@@ -37,9 +37,9 @@ void ExtendibleHTableDirectoryPage::Init(uint32_t max_depth) {
 auto ExtendibleHTableDirectoryPage::GetGlobalDepthMask() const -> uint32_t { return (1 << global_depth_) - 1; }
 
 auto ExtendibleHTableDirectoryPage::GetLocalDepthMask(uint32_t bucket_idx) const -> uint32_t {
-  if (bucket_idx >= Size()) {
-    throw Exception("overflow ExtendibleHTableDirectoryPage Size");
-  }
+  // if (bucket_idx >= Size()) {
+  //   throw Exception("overflow ExtendibleHTableDirectoryPage Size");
+  // }
   return (1 << local_depths_[bucket_idx]) - 1;
 }
 
@@ -51,9 +51,9 @@ auto ExtendibleHTableDirectoryPage::HashToBucketIndex(uint32_t hash) const -> ui
 }
 
 auto ExtendibleHTableDirectoryPage::GetBucketPageId(uint32_t bucket_idx) const -> page_id_t {
-  if (bucket_idx >= Size()) {
-    throw Exception("overflow ExtendibleHTableDirectoryPage Size");
-  }
+  // if (bucket_idx >= Size()) {
+  //   throw Exception("overflow ExtendibleHTableDirectoryPage Size");
+  // }
   return bucket_page_ids_[bucket_idx];
 }
 
@@ -72,6 +72,26 @@ auto ExtendibleHTableDirectoryPage::GetSplitImageIndex(uint32_t bucket_idx) cons
   // uint32_t local_depth = GetLocalDepth(bucket_idx);
   return bucket_idx ^ (1 << (GetGlobalDepth() - 1));
 }
+
+auto ExtendibleHTableDirectoryPage::GetActSplitIndex(uint32_t bucket_idx) const -> uint32_t {
+  if (bucket_idx >= Size()) {
+    throw Exception("overflow ExtendibleHTableDirectoryPage Size");
+  }
+  // uint32_t local_depth = GetLocalDepth(bucket_idx);
+  return bucket_idx ^ (1 << (GetLocalDepth(bucket_idx)));
+}
+
+// auto ExtendibleHTableDirectoryPage::GetActSplitIndex(uint32_t bucket_idx) const -> uint32_t {
+//   if (bucket_idx >= Size()) {
+//     throw Exception("overflow ExtendibleHTableDirectoryPage Size");
+//   }
+//   if(GetLocalDepth(bucket_idx) <= 0 )
+//   {
+//     throw Exception("no GetActSplitIndex");
+//   }
+//   // uint32_t local_depth = GetLocalDepth(bucket_idx);
+//   return bucket_idx ^ (1 << (GetLocalDepth(bucket_idx) - 1));
+// }
 
 auto ExtendibleHTableDirectoryPage::GetGlobalDepth() const -> uint32_t { return global_depth_; }
 

@@ -126,6 +126,8 @@ class ExtendibleHTableBucketPage {
    */
   auto IsEmpty() const -> bool;
 
+  auto LookupAt(const KeyType &key, ValueType &value, const KeyComparator &cmp, uint32_t &idx) const -> bool;
+
   /**
    * Prints the bucket's occupancy information
    */

@@ -39,6 +39,19 @@ auto ExtendibleHTableBucketPage<K, V, KC>::Lookup(const K &key, V &value, const 
 }
 
 template <typename K, typename V, typename KC>
+auto ExtendibleHTableBucketPage<K, V, KC>::LookupAt(const K &key, V &value, const KC &cmp, uint32_t &idx) const
+    -> bool {
+  for (uint32_t i = 0; i < Size(); i++) {
+    if (!cmp(array_[i].first, key)) {
+      value = array_[i].second;
+      idx = i;
+      return true;
+    }
+  }
+  return false;
+}
+
+template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::Insert(const K &key, const V &value, const KC &cmp) -> bool {
   if (IsFull()) {
     return false;

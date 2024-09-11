@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <cstring>
 
+#include "common/config.h"
 #include "common/exception.h"
 
 namespace bustub {
@@ -23,15 +24,19 @@ void ExtendibleHTableHeaderPage::Init(uint32_t max_depth) {
     throw Exception("overflow ExtendibleHTableHeaderPage HTABLE_HEADER_MAX_DEPTH");
   }
   max_depth_ = max_depth;
-  std::memset(directory_page_ids_, -1, sizeof(directory_page_ids_));
+  std::memset(directory_page_ids_, INVALID_PAGE_ID, sizeof(directory_page_ids_));
   // throw NotImplementedException("ExtendibleHTableHeaderPage is not implemented");
 }
 
 auto ExtendibleHTableHeaderPage::HashToDirectoryIndex(uint32_t hash) const -> uint32_t {
-  return hash >> (32 - max_depth_);
+  if (max_depth_ == 0) {
+    return 0;
+  }
+  uint32_t result = hash >> (32 - max_depth_);
+  return result;
 }
 
-auto ExtendibleHTableHeaderPage::GetDirectoryPageId(uint32_t directory_idx) const -> uint32_t {
+auto ExtendibleHTableHeaderPage::GetDirectoryPageId(uint32_t directory_idx) const -> page_id_t {
   if (directory_idx >= MaxSize()) {
     throw Exception("overflow ExtendibleHTableHeaderPage MaxSize");
   }
