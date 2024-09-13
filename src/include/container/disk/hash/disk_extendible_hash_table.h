@@ -1,15 +1,3 @@
-//===----------------------------------------------------------------------===//
-//
-//                         BusTub
-//
-// disk_extendible_hash_table.h
-//
-// Identification: src/include/container/disk/hash/extendible_hash_table.h
-//
-// Copyright (c) 2015-2023, Carnegie Mellon University Database Group
-//
-//===----------------------------------------------------------------------===//
-
 #pragma once
 
 #include <deque>
@@ -116,19 +104,13 @@ class DiskExtendibleHashTable {
   auto InsertToNewBucket(ExtendibleHTableDirectoryPage *directory, uint32_t bucket_idx, const K &key, const V &value)
       -> bool;
 
-  void UpdateDirectoryMapping(ExtendibleHTableDirectoryPage *directory, uint32_t new_bucket_idx,
-                              page_id_t new_bucket_page_id, uint32_t new_local_depth, uint32_t local_depth_mask);
-  auto IncrNewBucket(ExtendibleHTableDirectoryPage *directory, uint32_t bucket_idx) -> bool;
+  auto UpdateDirectoryMapping(ExtendibleHTableDirectoryPage *directory_page, uint32_t old_bucket_idx,
+                              page_id_t new_bucket_page_id, uint32_t new_local_depth, uint32_t local_depth_mask)
+      -> uint32_t;
 
   void MigrateEntries(ExtendibleHTableBucketPage<K, V, KC> *old_bucket,
                       ExtendibleHTableBucketPage<K, V, KC> *new_bucket, uint32_t new_bucket_idx,
                       uint32_t local_depth_mask);
-
-  auto LookupBucketPageId(const K &key, page_id_t &bucket_page_id, uint32_t &bucket_page_idx,
-                          Transaction *transaction) const -> bool;
-
-  auto LookupDirectoryPageId(const K &key, page_id_t &directory_page_id, uint32_t &directory_page_idx,
-                             Transaction *transaction) const -> bool;
 
   // member variables
   std::string index_name_;
