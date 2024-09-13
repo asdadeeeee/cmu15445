@@ -103,6 +103,9 @@ class BasicPageGuard {
   }
 
  private:
+  void Clear();
+
+ private:
   friend class ReadPageGuard;
   friend class WritePageGuard;
 
