@@ -68,7 +68,7 @@ auto DiskExtendibleHashTable<K, V, KC>::GetValue(const K &key, std::vector<V> *r
     return false;
   }
   // 获得directory_page_id header可弃
-  // header_guard.Drop();
+  header_guard.Drop();
   ReadPageGuard directory_guard = bpm_->FetchPageRead(directory_page_id);
   auto directory_page = directory_guard.As<ExtendibleHTableDirectoryPage>();
   bucket_page_idx = directory_page->HashToBucketIndex(hash);
@@ -77,7 +77,7 @@ auto DiskExtendibleHashTable<K, V, KC>::GetValue(const K &key, std::vector<V> *r
     return false;
   }
   // 获得bucket_page_id directory可弃
-  // directory_guard.Drop();
+  directory_guard.Drop();
   ReadPageGuard bucket_guard = bpm_->FetchPageRead(bucket_page_id);
   auto bucket_page = bucket_guard.As<ExtendibleHTableBucketPage<K, V, KC>>();
   V v;
@@ -94,11 +94,6 @@ auto DiskExtendibleHashTable<K, V, KC>::GetValue(const K &key, std::vector<V> *r
 
 template <typename K, typename V, typename KC>
 auto DiskExtendibleHashTable<K, V, KC>::Insert(const K &key, const V &value, Transaction *transaction) -> bool {
-  // 不一定需要 后续insert时会检查
-  std::vector<V> values;
-  if (GetValue(key, &values)) {
-    return false;
-  }
   // 是否申请readguard  后续添加读升级写upgrade
   // BasicPageGuard header_guard = bpm_->FetchPageBasic(header_page_id_);
   WritePageGuard header_guard = bpm_->FetchPageWrite(header_page_id_);
@@ -130,6 +125,10 @@ auto DiskExtendibleHashTable<K, V, KC>::Insert(const K &key, const V &value, Tra
   }
   WritePageGuard bucket_guard = bpm_->FetchPageWrite(bucket_page_id);
   auto bucket_page = bucket_guard.AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
+  V tmp_value;
+  if (bucket_page->Lookup(key, tmp_value, cmp_)) {
+    return false;
+  }
   bool insert_success = false;
   if (!bucket_page->IsFull()) {
     // 未满则直接插入
@@ -274,7 +273,7 @@ auto DiskExtendibleHashTable<K, V, KC>::Remove(const K &key, Transaction *transa
     return false;
   }
   // 获得directory_page_id header可弃
-  // header_guard.Drop();
+  header_guard.Drop();
 
   WritePageGuard directory_guard = bpm_->FetchPageWrite(directory_page_id);
   auto directory_page = directory_guard.AsMut<ExtendibleHTableDirectoryPage>();
