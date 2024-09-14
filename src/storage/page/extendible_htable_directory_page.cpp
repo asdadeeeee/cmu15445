@@ -78,8 +78,18 @@ auto ExtendibleHTableDirectoryPage::GetActSplitIndex(uint32_t bucket_idx) const 
     throw Exception("overflow ExtendibleHTableDirectoryPage Size");
   }
   // uint32_t local_depth = GetLocalDepth(bucket_idx);
-  return bucket_idx ^ (1 << (GetLocalDepth(bucket_idx)));
+  if (GetLocalDepth(bucket_idx) == 0) {
+    return bucket_idx ^ (1 << (GetLocalDepth(bucket_idx)));
+  }
+  return bucket_idx ^ (1 << (GetLocalDepth(bucket_idx) - 1));
 }
+
+auto ExtendibleHTableDirectoryPage::GetTempSplitIndex(uint32_t bucket_idx) const -> uint32_t {
+  auto local_depth_mask = GetLocalDepthMask(bucket_idx);              //  11
+  auto local_depth = GetLocalDepth(bucket_idx);                       // 假设为2
+  return (bucket_idx & local_depth_mask) ^ (1 << (local_depth - 1));  //  10->00 01->11 11->01 00->10
+}
+
 
 // auto ExtendibleHTableDirectoryPage::GetActSplitIndex(uint32_t bucket_idx) const -> uint32_t {
 //   if (bucket_idx >= Size()) {
@@ -124,8 +134,9 @@ void ExtendibleHTableDirectoryPage::DecrGlobalDepth() {
 }
 
 auto ExtendibleHTableDirectoryPage::CanShrink() -> bool {
-  bool can_shrink = false;
-  for (auto local_depth : local_depths_) {
+  bool can_shrink = true;
+  for (uint32_t i = 0; i < Size(); i++) {
+    uint32_t local_depth = GetLocalDepth(i);
     if (local_depth == GetGlobalDepth()) {
       can_shrink = false;
       break;
@@ -133,7 +144,6 @@ auto ExtendibleHTableDirectoryPage::CanShrink() -> bool {
     if (local_depth > GetGlobalDepth()) {
       throw Exception("should not be here");
     }
-    can_shrink = true;
   }
   return can_shrink;
 }

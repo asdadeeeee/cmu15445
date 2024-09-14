@@ -41,12 +41,14 @@ auto BasicPageGuard::operator=(BasicPageGuard &&that) noexcept -> BasicPageGuard
 }
 
 auto BasicPageGuard::UpgradeRead() -> ReadPageGuard {
+  this->page_->RLatch();
   ReadPageGuard read_page_guard(this->bpm_, this->page_);
   Clear();
   return read_page_guard;
 }
 
 auto BasicPageGuard::UpgradeWrite() -> WritePageGuard {
+  this->page_->WLatch();
   WritePageGuard write_page_guard(this->bpm_, this->page_);
   Clear();
   return write_page_guard;

@@ -139,8 +139,12 @@ TEST(ExtendibleHTableTest, RemoveTest1) {
 
   // remove the keys we inserted
   for (int i = 0; i < num_keys; i++) {
+    // printf("before normal remove %d\n",i);
+    // ht.PrintHT();
     bool removed = ht.Remove(i);
     ASSERT_TRUE(removed);
+    // printf("after normal remove %d\n",i);
+    // ht.PrintHT();
     std::vector<int> res;
     ht.GetValue(i, &res);
     ASSERT_EQ(0, res.size());
@@ -150,14 +154,96 @@ TEST(ExtendibleHTableTest, RemoveTest1) {
 
   // try to remove some keys that don't exist/were not inserted
   for (int i = num_keys; i < 2 * num_keys; i++) {
+    // printf("before unnn remove %d\n",i);
+    // ht.PrintHT();
     bool removed = ht.Remove(i);
     ASSERT_FALSE(removed);
+    // printf("after unnn remove %d\n",i);
+    // ht.PrintHT();
     std::vector<int> res;
     bool got_value = ht.GetValue(i, &res);
     ASSERT_FALSE(got_value);
     ASSERT_EQ(0, res.size());
   }
 
+  ht.VerifyIntegrity();
+}
+
+// NOLINTNEXTLINE
+TEST(ExtendibleHTableTest, RemoveTest2) {
+  auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
+  auto bpm = std::make_unique<BufferPoolManager>(50, disk_mgr.get());
+  DiskExtendibleHashTable<int, int, IntComparator> ht("blah", bpm.get(), IntComparator(), HashFunction<int>(), 0, 3, 2);
+  int insert_num[]{4, 5, 6, 14};
+  // insert some values
+  for (int &i : insert_num) {
+    bool inserted = ht.Insert(i, i);
+    ASSERT_TRUE(inserted);
+    std::vector<int> res;
+    ht.GetValue(i, &res);
+    ASSERT_EQ(1, res.size());
+    ASSERT_EQ(i, res[0]);
+  }
+  ht.VerifyIntegrity();
+  ht.PrintHT();
+  int remove_num[]{5, 14, 4};
+  for (int &i : remove_num) {
+    bool removed = ht.Remove(i);
+    ASSERT_TRUE(removed);
+    std::vector<int> res;
+    ht.GetValue(i, &res);
+    ASSERT_EQ(0, res.size());
+  }
+  ht.VerifyIntegrity();
+}
+
+// NOLINTNEXTLINE
+TEST(ExtendibleHTableTest, GrowShrinkTest) {
+  auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
+  auto bpm = std::make_unique<BufferPoolManager>(50, disk_mgr.get());
+  DiskExtendibleHashTable<int, int, IntComparator> ht("blah", bpm.get(), IntComparator(), HashFunction<int>(), 9, 9,
+                                                      511);
+  // insert some values
+  for (int i = 0; i < 1000; i++) {
+    bool inserted = ht.Insert(i, i);
+    ASSERT_TRUE(inserted);
+    std::vector<int> res;
+    ht.GetValue(i, &res);
+    ASSERT_EQ(1, res.size());
+    ASSERT_EQ(i, res[0]);
+  }
+  ht.VerifyIntegrity();
+  for (int i = 0; i < 500; i++) {
+    bool inserted = ht.Remove(i);
+    ASSERT_TRUE(inserted);
+    std::vector<int> res;
+    ht.GetValue(i, &res);
+    ASSERT_EQ(0, res.size());
+  }
+  ht.VerifyIntegrity();
+  for (int i = 1000; i < 2000; i++) {
+    bool inserted = ht.Insert(i, i);
+    ASSERT_TRUE(inserted);
+    std::vector<int> res;
+    ht.GetValue(i, &res);
+    ASSERT_EQ(1, res.size());
+    ASSERT_EQ(i, res[0]);
+  }
+  ht.VerifyIntegrity();
+  for (int i = 500; i < 1500; i++) {
+    bool inserted = ht.Remove(i);
+    ASSERT_TRUE(inserted);
+    std::vector<int> res;
+    ht.GetValue(i, &res);
+    ASSERT_EQ(0, res.size());
+  }
+  for (int i = 0; i < 1500; i++) {
+    bool inserted = ht.Remove(i);
+    ASSERT_FALSE(inserted);
+    std::vector<int> res;
+    ht.GetValue(i, &res);
+    ASSERT_EQ(0, res.size());
+  }
   ht.VerifyIntegrity();
 }
 

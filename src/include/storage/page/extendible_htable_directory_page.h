@@ -192,6 +192,8 @@ class ExtendibleHTableDirectoryPage {
    */
   void PrintDirectory() const;
 
+  auto GetTempSplitIndex(uint32_t bucket_idx) const -> uint32_t;
+
  private:
   uint32_t max_depth_;
   uint32_t global_depth_;

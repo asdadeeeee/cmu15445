@@ -124,11 +124,11 @@ class DiskExtendibleHashTable {
                       ExtendibleHTableBucketPage<K, V, KC> *new_bucket, uint32_t new_bucket_idx,
                       uint32_t local_depth_mask);
 
-  auto LookupBucketPageId(const K &key, page_id_t &bucket_page_id, uint32_t &bucket_page_idx,
-                          Transaction *transaction) const -> bool;
+  //   auto LookupBucketPageId(const K &key, page_id_t &bucket_page_id, uint32_t &bucket_page_idx,
+  //                           Transaction *transaction) const -> bool;
 
-  auto LookupDirectoryPageId(const K &key, page_id_t &directory_page_id, uint32_t &directory_page_idx,
-                             Transaction *transaction) const -> bool;
+  //   auto LookupDirectoryPageId(const K &key, page_id_t &directory_page_id, uint32_t &directory_page_idx,
+  //                              Transaction *transaction) const -> bool;
 
   // member variables
   std::string index_name_;
