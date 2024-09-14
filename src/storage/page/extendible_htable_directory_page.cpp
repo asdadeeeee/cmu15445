@@ -84,25 +84,6 @@ auto ExtendibleHTableDirectoryPage::GetActSplitIndex(uint32_t bucket_idx) const 
   return bucket_idx ^ (1 << (GetLocalDepth(bucket_idx) - 1));
 }
 
-auto ExtendibleHTableDirectoryPage::GetTempSplitIndex(uint32_t bucket_idx) const -> uint32_t {
-  auto local_depth_mask = GetLocalDepthMask(bucket_idx);              //  11
-  auto local_depth = GetLocalDepth(bucket_idx);                       // 假设为2
-  return (bucket_idx & local_depth_mask) ^ (1 << (local_depth - 1));  //  10->00 01->11 11->01 00->10
-}
-
-
-// auto ExtendibleHTableDirectoryPage::GetActSplitIndex(uint32_t bucket_idx) const -> uint32_t {
-//   if (bucket_idx >= Size()) {
-//     throw Exception("overflow ExtendibleHTableDirectoryPage Size");
-//   }
-//   if(GetLocalDepth(bucket_idx) <= 0 )
-//   {
-//     throw Exception("no GetActSplitIndex");
-//   }
-//   // uint32_t local_depth = GetLocalDepth(bucket_idx);
-//   return bucket_idx ^ (1 << (GetLocalDepth(bucket_idx) - 1));
-// }
-
 auto ExtendibleHTableDirectoryPage::GetGlobalDepth() const -> uint32_t { return global_depth_; }
 
 auto ExtendibleHTableDirectoryPage::GetMaxDepth() const -> uint32_t { return max_depth_; }

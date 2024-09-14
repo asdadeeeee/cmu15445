@@ -24,7 +24,6 @@ template <typename K, typename V, typename KC>
 void ExtendibleHTableBucketPage<K, V, KC>::Init(uint32_t max_size) {
   size_ = 0;
   max_size_ = max_size;
-  // throw NotImplementedException("ExtendibleHTableBucketPage not implemented");
 }
 
 template <typename K, typename V, typename KC>
@@ -82,10 +81,10 @@ template <typename K, typename V, typename KC>
 void ExtendibleHTableBucketPage<K, V, KC>::RemoveAt(uint32_t bucket_idx) {
   if (bucket_idx >= Size()) {
     throw Exception("overflow ExtendibleHTableBucketPage Size");
+    return;
   }
   array_[bucket_idx] = array_[size_ - 1];
   size_--;
-  // throw NotImplementedException("ExtendibleHTableBucketPage not implemented");
 }
 
 template <typename K, typename V, typename KC>

@@ -200,7 +200,7 @@ TEST(ExtendibleHTableTest, RemoveTest2) {
 // NOLINTNEXTLINE
 TEST(ExtendibleHTableTest, GrowShrinkTest) {
   auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
-  auto bpm = std::make_unique<BufferPoolManager>(50, disk_mgr.get());
+  auto bpm = std::make_unique<BufferPoolManager>(3, disk_mgr.get());
   DiskExtendibleHashTable<int, int, IntComparator> ht("blah", bpm.get(), IntComparator(), HashFunction<int>(), 9, 9,
                                                       511);
   // insert some values
