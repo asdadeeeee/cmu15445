@@ -34,7 +34,9 @@ class LRUKNode {
     Access(initial_timestamp);
   }
 
-  void Access(size_t timestamp, AccessType access_type = AccessType::Unknown);
+  explicit LRUKNode(size_t k, bool is_evictable = false) : k_(k), is_evictable_(is_evictable) {}
+
+  void Access(size_t timestamp);
 
   void SetEvictable(bool evivtable) { is_evictable_ = evivtable; }
 
