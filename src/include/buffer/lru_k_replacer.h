@@ -30,8 +30,7 @@ enum class AccessType { Unknown = 0, Lookup, Scan, Index };
 
 class LRUKNode {
  public:
-  LRUKNode(size_t initial_timestamp, size_t k, bool is_evictable = false)
-      : k_(k), is_evictable_(is_evictable) {
+  LRUKNode(size_t initial_timestamp, size_t k, bool is_evictable = false) : k_(k), is_evictable_(is_evictable) {
     Access(initial_timestamp);
   }
 

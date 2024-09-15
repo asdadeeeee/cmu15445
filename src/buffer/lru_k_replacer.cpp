@@ -103,21 +103,15 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
     throw bustub::Exception(fmt::format("FrameId {} Invalid", frame_id));
   }
   std::lock_guard<std::mutex> lock(latch_);
-  std::unique_ptr<LRUKNode> new_node_ptr;
   auto iter = node_store_.find(frame_id);
-  if (iter == node_store_.end()) {
-    // Fail to find out the LRUKNode.
-    new_node_ptr = std::make_unique<LRUKNode>(k_);
-    node_store_.insert(std::make_pair(frame_id, *new_node_ptr));
-  }
-  auto &node = (iter == node_store_.end()) ? *new_node_ptr : iter->second;
-  if (set_evictable && !node.GetEvictable()) {
-    node.SetEvictable(set_evictable);
-    curr_size_.fetch_add(1);
-  }
-  if (!set_evictable && node.GetEvictable()) {
-    node.SetEvictable(set_evictable);
-    curr_size_.fetch_sub(1);
+  if (iter != node_store_.end()) {
+    if (!iter->second.GetEvictable() && set_evictable) {
+      curr_size_.fetch_add(1);
+      iter->second.SetEvictable(set_evictable);
+    } else if (iter->second.GetEvictable() && !set_evictable) {
+      curr_size_.fetch_sub(1);
+      iter->second.SetEvictable(set_evictable);
+    }
   }
 }
 
