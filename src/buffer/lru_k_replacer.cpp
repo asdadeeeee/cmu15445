@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <list>
+#include <memory>
 #include <utility>
 #include "common/exception.h"
 #include "fmt/format.h"
@@ -21,13 +22,11 @@
 
 namespace bustub {
 
-void LRUKNode::Access(size_t timestamp, AccessType access_type) {
-  if (access_type != AccessType::Scan) {
-    if (history_.size() == k_ && !history_.empty()) {
-      history_.pop_front();
-    }
-    history_.push_back(timestamp);
+void LRUKNode::Access(size_t timestamp) {
+  if (history_.size() == k_) {
+    history_.pop_front();
   }
+  history_.push_back(timestamp);
 }
 
 void LRUKNode::PrintHistory() {
@@ -66,57 +65,37 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
     return false;
   }
   size_t max_distance = 0;
-  size_t early_history = 0xFFFFFFFF;
+  size_t max_dddistance = 0;
+  bool is_smaller_k = false;
   bool if_found = false;
   frame_id_t evict_frame_id = 0;
-  for (auto pair : node_store_) {
-    if (pair.second.GetEvictable()) {
+  for (auto &pair : node_store_) {
+    auto &node = pair.second;
+    if (node.GetEvictable()) {
       if_found = true;
-      size_t first_history = pair.second.GetEarlyHistory();
-      size_t distance = current_timestamp_ - first_history;
-      if (pair.second.GetHistorySize() < k_ && first_history < early_history) {
-        early_history = first_history;
-        max_distance = 0xFFFFFFFF;
+      if (node.GetHistorySize() == 0) {
         evict_frame_id = pair.first;
-      } else if (pair.second.GetHistorySize() == k_ && distance > max_distance) {
+        break;
+      }
+      size_t first_history = node.GetEarlyHistory();
+      size_t distance = current_timestamp_ - first_history;
+      if (node.GetHistorySize() < k_ && distance > max_distance) {
+        is_smaller_k = true;
         max_distance = distance;
+        evict_frame_id = pair.first;
+      } else if (node.GetHistorySize() == k_ && !is_smaller_k && distance > max_dddistance) {
+        max_dddistance = distance;
         evict_frame_id = pair.first;
       }
     }
   }
   if (if_found) {
     *frame_id = evict_frame_id;
-    auto frame = node_store_.find(evict_frame_id);
-    frame->second.RemoveFromReplacer();
+    node_store_.find(evict_frame_id)->second.RemoveFromReplacer();
+    node_store_.erase(evict_frame_id);
     curr_size_.fetch_sub(1);
   }
-  // if (if_found) {
-  //   printf("after Evict frame id = %d size = %zu\n", *frame_id, Size());
-  // } else {
-  //   printf("after fail Evict size = %zu\n", Size());
-  // }
   return if_found;
-}
-
-void LRUKReplacer::RecordAccess(frame_id_t frame_id, AccessType access_type) {
-  if (!IfFrameIdValid(frame_id)) {
-    throw bustub::Exception(fmt::format("FrameId {} Invalid", frame_id));
-  }
-  std::lock_guard<std::mutex> lock(latch_);
-  // printf("RecordAccess frame id = %d \n", frame_id);
-  current_timestamp_.fetch_add(1);
-  auto iter = node_store_.find(frame_id);
-  if (iter == node_store_.end()) {
-    LRUKNode new_node{current_timestamp_, k_};
-    // printf("after RecordAccess frame id = %d ,History = ", frame_id);
-    // new_node.PrintHistory();
-    node_store_.emplace(frame_id, std::move(new_node));
-  } else {
-    iter->second.Access(current_timestamp_, access_type);
-    // printf("after RecordAccess frame id = %d ,History = ", frame_id);
-    // iter->second.PrintHistory();
-  }
-  // printf("after RecordAccess frame id = %d size = %zu\n", frame_id, Size());
 }
 
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
@@ -124,17 +103,41 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
     throw bustub::Exception(fmt::format("FrameId {} Invalid", frame_id));
   }
   std::lock_guard<std::mutex> lock(latch_);
-  // printf("SetEvictable frame id = %d  evictable=%d\n", frame_id, static_cast<int>(set_evictable));
+  std::unique_ptr<LRUKNode> new_node_ptr;
   auto iter = node_store_.find(frame_id);
-  if (iter != node_store_.end()) {
-    if (!iter->second.GetEvictable() && set_evictable) {
-      curr_size_.fetch_add(1);
-    } else if (iter->second.GetEvictable() && !set_evictable) {
-      curr_size_.fetch_sub(1);
-    }
-    iter->second.SetEvictable(set_evictable);
+  if (iter == node_store_.end()) {
+    // Fail to find out the LRUKNode.
+    new_node_ptr = std::make_unique<LRUKNode>(k_);
+    node_store_.insert(std::make_pair(frame_id, *new_node_ptr));
   }
-  // printf("after SetEvictable frame id = %d size = %zu\n", frame_id, Size());
+  auto &node = (iter == node_store_.end()) ? *new_node_ptr : iter->second;
+  if (set_evictable && !node.GetEvictable()) {
+    node.SetEvictable(set_evictable);
+    curr_size_.fetch_add(1);
+  }
+  if (!set_evictable && node.GetEvictable()) {
+    node.SetEvictable(set_evictable);
+    curr_size_.fetch_sub(1);
+  }
+}
+
+void LRUKReplacer::RecordAccess(frame_id_t frame_id, AccessType access_type) {
+  std::scoped_lock<std::mutex> lock(latch_);
+  auto iter = node_store_.find(frame_id);
+  if (iter == node_store_.end()) {
+    // Fail to find out the LRUKNode.
+    auto new_node_ptr = std::make_unique<LRUKNode>(k_);
+    if (access_type != AccessType::Scan) {
+      // 此处易出错先touch再加1
+      new_node_ptr->Access(current_timestamp_.fetch_add(1));
+    }
+    node_store_.insert(std::make_pair(frame_id, *new_node_ptr));
+  } else {
+    auto &node = iter->second;
+    if (access_type != AccessType::Scan) {
+      node.Access(current_timestamp_.fetch_add(1));
+    }
+  }
 }
 
 void LRUKReplacer::Remove(frame_id_t frame_id) {
@@ -142,7 +145,6 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
     throw bustub::Exception(fmt::format("FrameId {} Invalid", frame_id));
   }
   std::lock_guard<std::mutex> lock(latch_);
-  // printf("remove frame id = %d \n", frame_id);
   auto iter = node_store_.find(frame_id);
   if (iter != node_store_.end()) {
     if (!iter->second.GetEvictable()) {
@@ -150,9 +152,9 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
     }
     iter->second.RemoveFromReplacer();
     curr_size_.fetch_sub(1);
+    // curr_size_--;
     node_store_.erase(iter);
   }
-  // printf("after remove frame id = %d size = %zu\n", frame_id, Size());
 }
 
 auto LRUKReplacer::Size() -> size_t { return curr_size_.load(); }

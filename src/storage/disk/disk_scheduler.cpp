@@ -38,34 +38,43 @@ DiskScheduler::~DiskScheduler() {
 
 void DiskScheduler::Schedule(DiskRequest r) { request_queue_.Put(std::move(r)); }
 
+// void DiskScheduler::ProcessRequest(const std::shared_ptr<DiskRequest> &r) {
+//   // 添加正在写的pageID vector 解决写后读一致性
+//   while (true) {
+//     // 使用队列？
+//     wait_lock_.lock();
+//     if (writing_pages_.find(r->page_id_) == writing_pages_.end()) {
+//       wait_lock_.unlock();
+//       break;
+//     }
+//     wait_lock_.unlock();
+//   }
+//   wait_lock_.lock();
+//   if (r->is_write_) {
+//     writing_pages_.insert(r->page_id_);
+//   }
+//   wait_lock_.unlock();
+//   std::thread t([this, r]() {  // 使用智能指针复制捕获，自动管理生命周期
+//     if (r->is_write_) {
+//       disk_manager_->WritePage(r->page_id_, r->data_);
+//       wait_lock_.lock();
+//       writing_pages_.erase(r->page_id_);
+//       wait_lock_.unlock();
+//     } else {
+//       disk_manager_->ReadPage(r->page_id_, r->data_);
+//     }
+//     r->callback_.set_value(true);
+//   });
+//   t.detach();  // 分离新创建的线程
+// }
+
 void DiskScheduler::ProcessRequest(const std::shared_ptr<DiskRequest> &r) {
-  // 添加正在写的pageID vector 解决写后读一致性
-  while (true) {
-    // 使用队列？
-    wait_lock_.lock();
-    if (writing_pages_.find(r->page_id_) == writing_pages_.end()) {
-      wait_lock_.unlock();
-      break;
-    }
-    wait_lock_.unlock();
-  }
-  wait_lock_.lock();
   if (r->is_write_) {
-    writing_pages_.insert(r->page_id_);
+    disk_manager_->WritePage(r->page_id_, r->data_);
+  } else {
+    disk_manager_->ReadPage(r->page_id_, r->data_);
   }
-  wait_lock_.unlock();
-  std::thread t([this, r]() {  // 使用智能指针复制捕获，自动管理生命周期
-    if (r->is_write_) {
-      disk_manager_->WritePage(r->page_id_, r->data_);
-      wait_lock_.lock();
-      writing_pages_.erase(r->page_id_);
-      wait_lock_.unlock();
-    } else {
-      disk_manager_->ReadPage(r->page_id_, r->data_);
-    }
-    r->callback_.set_value(true);
-  });
-  t.detach();  // 分离新创建的线程
+  r->callback_.set_value(true);
 }
 
 void DiskScheduler::StartWorkerThread() {

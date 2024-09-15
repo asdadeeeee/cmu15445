@@ -1,9 +1,9 @@
-//===----------------------------------------------------------------------===//
-//
+// ===----------------------------------------------------------------------===//
+
 //                         BusTub
-//
+
 // buffer_pool_manager.cpp
-//
+
 // Identification: src/buffer/buffer_pool_manager.cpp
 //
 // Copyright (c) 2015-2021, Carnegie Mellon University Database Group
@@ -23,15 +23,8 @@ namespace bustub {
 BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager, size_t replacer_k,
                                      LogManager *log_manager)
     : pool_size_(pool_size), disk_scheduler_(std::make_unique<DiskScheduler>(disk_manager)), log_manager_(log_manager) {
-  // TODO(students): remove this line after you have implemented the buffer pool manager
-  // throw NotImplementedException(
-  //     "BufferPoolManager is not implemented yet. If you have finished implementing BPM, please remove the throw "
-  //     "exception line in `buffer_pool_manager.cpp`.");
-
-  // we allocate a consecutive memory space for the buffer pool
   pages_ = new Page[pool_size_];
   replacer_ = std::make_unique<LRUKReplacer>(pool_size, replacer_k);
-  // Initially, every page is in the free list.
   for (size_t i = 0; i < pool_size_; ++i) {
     free_list_.emplace_back(static_cast<int>(i));
   }
@@ -39,17 +32,6 @@ BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager
 
 BufferPoolManager::~BufferPoolManager() { delete[] pages_; }
 
-// auto BufferPoolManager::FindPageIdByFrameId(frame_id_t frame_id) -> std::optional<page_id_t>
-// {
-//   for(auto pair : page_table_)
-//   {
-//     if(pair.second == frame_id)
-//     {
-//       return pair.first;
-//     }
-//   }
-//   return std::nullopt;
-// }
 auto BufferPoolManager::GetPreparedFrame(frame_id_t *prepared_frame_id) -> bool {
   bool if_found = false;
   if (!free_list_.empty()) {

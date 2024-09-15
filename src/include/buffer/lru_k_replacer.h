@@ -30,11 +30,16 @@ enum class AccessType { Unknown = 0, Lookup, Scan, Index };
 
 class LRUKNode {
  public:
-  LRUKNode(size_t initial_timestamp, size_t k, bool is_evictable = false) : k_(k), is_evictable_(is_evictable) {
+  LRUKNode(size_t initial_timestamp, size_t k, bool is_evictable = false)
+      : k_(k), is_evictable_(is_evictable) {
     Access(initial_timestamp);
   }
 
-  void Access(size_t timestamp, AccessType access_type = AccessType::Unknown);
+  explicit LRUKNode(size_t k, bool is_evictable = false) : k_(k), is_evictable_(is_evictable) {}
+
+  // LRUKNode() = default;
+
+  void Access(size_t timestamp);
 
   void SetEvictable(bool evivtable) { is_evictable_ = evivtable; }
 
@@ -51,7 +56,6 @@ class LRUKNode {
  private:
   /** History of last seen K timestamps of this page. Least recent timestamp stored in front. */
   // Remove maybe_unused if you start using them. Feel free to change the member variables as you want.
-
   std::list<size_t> history_;
   size_t k_;
   bool is_evictable_{false};
