@@ -77,11 +77,11 @@ auto ReadPageGuard::operator=(ReadPageGuard &&that) noexcept -> ReadPageGuard & 
 
 void ReadPageGuard::Drop() {
   if (this->guard_.page_ != nullptr) {
-    this->guard_.bpm_->UnpinPage(this->guard_.PageId(), this->guard_.is_dirty_);
+    // this->guard_.bpm_->UnpinPage(this->guard_.PageId(), this->guard_.is_dirty_);
     this->guard_.page_->RUnlatch();
   }
-  // this->guard_.Drop();
-  this->guard_.Clear();
+  this->guard_.Drop();
+  // this->guard_.Clear();
 }
 
 ReadPageGuard::~ReadPageGuard() { Drop(); }
@@ -106,10 +106,11 @@ auto WritePageGuard::operator=(WritePageGuard &&that) noexcept -> WritePageGuard
 
 void WritePageGuard::Drop() {
   if (this->guard_.page_ != nullptr) {
-    this->guard_.bpm_->UnpinPage(this->guard_.PageId(), this->guard_.is_dirty_);
+    // this->guard_.bpm_->UnpinPage(this->guard_.PageId(), this->guard_.is_dirty_);
     this->guard_.page_->WUnlatch();
   }
-  this->guard_.Clear();
+  // this->guard_.Clear();
+  this->guard_.Drop();
 }
 
 WritePageGuard::~WritePageGuard() { Drop(); }
