@@ -58,6 +58,9 @@ class UpdateExecutor : public AbstractExecutor {
   auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); }
 
  private:
+  void UndoUpdate(std::vector<std::pair<RID, RID>> &temp_update_old_new_rids);
+
+ private:
   /** The update plan node to be executed */
   const UpdatePlanNode *plan_;
 
@@ -66,5 +69,7 @@ class UpdateExecutor : public AbstractExecutor {
 
   /** The child executor to obtain value from */
   std::unique_ptr<AbstractExecutor> child_executor_;
+
+  bool if_executed_;
 };
 }  // namespace bustub
