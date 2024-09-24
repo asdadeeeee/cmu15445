@@ -10,6 +10,11 @@
 #include "catalog/catalog.h"
 #include "concurrency/transaction.h"
 #include "execution/expressions/abstract_expression.h"
+#include "execution/expressions/column_value_expression.h"
+#include "execution/expressions/comparison_expression.h"
+#include "execution/expressions/constant_value_expression.h"
+#include "execution/expressions/logic_expression.h"
+
 #include "execution/plans/abstract_plan.h"
 
 namespace bustub {
@@ -113,6 +118,12 @@ class Optimizer {
   const Catalog &catalog_;
 
   const bool force_starter_rule_;
+
+  void GetKeysFromFilter(const bustub::AbstractExpressionRef &filter_predicate,
+                         ConstantValueExpression * &pred_keys,
+                         std::vector<const ColumnValueExpression *> &indexed_columns);
+  auto CanSeqScanBeIndexScan(const bustub::AbstractPlanNodeRef &seq_plan, index_oid_t &index_id,
+                             const std::vector<const ColumnValueExpression *> &indexed_columns) -> bool;
 };
 
 }  // namespace bustub
