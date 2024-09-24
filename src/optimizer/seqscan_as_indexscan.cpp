@@ -36,7 +36,7 @@ auto Optimizer::OptimizeSeqScanAsIndexScan(const bustub::AbstractPlanNodeRef &pl
 }
 
 void Optimizer::GetKeysFromFilter(const bustub::AbstractExpressionRef &filter_predicate,
-                                  ConstantValueExpression * &pred_keys,
+                                  ConstantValueExpression *&pred_keys,
                                   std::vector<const ColumnValueExpression *> &indexed_columns) {
   auto comare_expr = std::dynamic_pointer_cast<ComparisonExpression>(filter_predicate);
   if (comare_expr) {

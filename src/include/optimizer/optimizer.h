@@ -119,8 +119,7 @@ class Optimizer {
 
   const bool force_starter_rule_;
 
-  void GetKeysFromFilter(const bustub::AbstractExpressionRef &filter_predicate,
-                         ConstantValueExpression * &pred_keys,
+  void GetKeysFromFilter(const bustub::AbstractExpressionRef &filter_predicate, ConstantValueExpression *&pred_keys,
                          std::vector<const ColumnValueExpression *> &indexed_columns);
   auto CanSeqScanBeIndexScan(const bustub::AbstractPlanNodeRef &seq_plan, index_oid_t &index_id,
                              const std::vector<const ColumnValueExpression *> &indexed_columns) -> bool;

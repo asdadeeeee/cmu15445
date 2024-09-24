@@ -25,10 +25,10 @@ void IndexScanExecutor::Init() {
   std::vector<Value> key_value_vec;
   key_value_vec.reserve(index_info_->index_->GetIndexColumnCount());
   // 本来应该这样的 2023fall的问题
-    //   for (auto key_value_expr : plan_->pred_key_) {
-    //     Value key_value = key_value_expr->val_;
-    //     key_value_vec.emplace_back(key_value);
-    //   }
+  //   for (auto key_value_expr : plan_->pred_key_) {
+  //     Value key_value = key_value_expr->val_;
+  //     key_value_vec.emplace_back(key_value);
+  //   }
   key_value_vec.emplace_back(plan_->pred_key_->val_);
   Tuple key(key_value_vec, &index_info_->key_schema_);
   htable_->ScanKey(key, &rids_, exec_ctx_->GetTransaction());
