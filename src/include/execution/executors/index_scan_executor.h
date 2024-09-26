@@ -49,5 +49,6 @@ class IndexScanExecutor : public AbstractExecutor {
   IndexInfo *index_info_;
   std::vector<RID> rids_;
   std::vector<RID>::iterator index_iter_;
+  bool if_init_ = false;
 };
 }  // namespace bustub

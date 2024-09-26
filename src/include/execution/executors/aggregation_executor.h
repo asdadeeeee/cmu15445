@@ -21,9 +21,12 @@
 #include "container/hash/hash_function.h"
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
+#include "execution/executors/values_executor.h"
 #include "execution/expressions/abstract_expression.h"
 #include "execution/plans/aggregation_plan.h"
 #include "storage/table/tuple.h"
+#include "type/type.h"
+#include "type/value.h"
 #include "type/value_factory.h"
 
 namespace bustub {
@@ -71,16 +74,71 @@ class SimpleAggregationHashTable {
    * @param input The input value
    */
   void CombineAggregateValues(AggregateValue *result, const AggregateValue &input) {
+    // std::vector<Value> values{};
     for (uint32_t i = 0; i < agg_exprs_.size(); i++) {
+      Value input_v = input.aggregates_.at(i);
       switch (agg_types_[i]) {
-        case AggregationType::CountStarAggregate:
-        case AggregationType::CountAggregate:
-        case AggregationType::SumAggregate:
-        case AggregationType::MinAggregate:
-        case AggregationType::MaxAggregate:
+        case AggregationType::CountStarAggregate: {
+          // Value v1 = ValueFactory::GetIntegerValue(1);
+          // values.emplace_back(result->aggregates_.at(i).Add(v1));
+          result->aggregates_.at(i) = result->aggregates_.at(i).Add(input_v);
+
+          break;
+        }
+        case AggregationType::CountAggregate: {
+          if (!input_v.IsNull()) {
+            if (result->aggregates_.at(i).IsNull()) {
+              // values.emplace_back(ValueFactory::GetIntegerValue(1));
+              result->aggregates_.at(i) = ValueFactory::GetIntegerValue(1);
+            } else {
+              Value v1 = ValueFactory::GetIntegerValue(1);
+              // values.emplace_back(result->aggregates_.at(i).Add(v1));
+              result->aggregates_.at(i) = result->aggregates_.at(i).Add(v1);
+            }
+          }
+          break;
+        }
+        case AggregationType::SumAggregate: {
+          if (!input_v.IsNull()) {
+            if (result->aggregates_.at(i).IsNull()) {
+              // values.emplace_back(input_v);
+              result->aggregates_.at(i) = input_v;
+            } else {
+              // values.emplace_back(result->aggregates_.at(i).Add(input_v));
+              result->aggregates_.at(i) = result->aggregates_.at(i).Add(input_v);
+            }
+          }
+          break;
+        }
+        case AggregationType::MinAggregate: {
+          if (!input_v.IsNull()) {
+            if (result->aggregates_.at(i).IsNull()) {
+              // values.emplace_back(input_v);
+              result->aggregates_.at(i) = input_v;
+            } else {
+              // values.emplace_back(result->aggregates_.at(i).Min(input_v));
+              result->aggregates_.at(i) = result->aggregates_.at(i).Min(input_v);
+            }
+          }
+          break;
+        }
+        case AggregationType::MaxAggregate: {
+          if (!input_v.IsNull()) {
+            if (result->aggregates_.at(i).IsNull()) {
+              // values.emplace_back(input_v);
+              result->aggregates_.at(i) = input_v;
+            } else {
+              // values.emplace_back(result->aggregates_.at(i).Min(input_v));
+              result->aggregates_.at(i) = result->aggregates_.at(i).Max(input_v);
+            }
+          }
+          break;
+        }
+        default:
           break;
       }
     }
+    // *result = values;
   }
 
   /**
@@ -93,6 +151,12 @@ class SimpleAggregationHashTable {
       ht_.insert({agg_key, GenerateInitialAggregateValue()});
     }
     CombineAggregateValues(&ht_[agg_key], agg_val);
+  }
+
+  void InitInsert(const AggregateKey &agg_key) {
+    if (ht_.count(agg_key) == 0) {
+      ht_.insert({agg_key, GenerateInitialAggregateValue()});
+    }
   }
 
   /**
@@ -203,9 +267,11 @@ class AggregationExecutor : public AbstractExecutor {
   std::unique_ptr<AbstractExecutor> child_executor_;
 
   /** Simple aggregation hash table */
-  // TODO(Student): Uncomment SimpleAggregationHashTable aht_;
+  // TODO(Student): Uncomment
+  std::unique_ptr<SimpleAggregationHashTable> aht_;
 
   /** Simple aggregation hash table iterator */
-  // TODO(Student): Uncomment SimpleAggregationHashTable::Iterator aht_iterator_;
+  // TODO(Student): Uncomment
+  SimpleAggregationHashTable::Iterator aht_iterator_;
 };
 }  // namespace bustub
