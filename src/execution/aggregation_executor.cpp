@@ -13,7 +13,6 @@
 #include <vector>
 
 #include "execution/executors/aggregation_executor.h"
-#include "googletest/googletest/include/gtest/gtest.h"
 #include "storage/table/tuple.h"
 #include "type/type.h"
 
