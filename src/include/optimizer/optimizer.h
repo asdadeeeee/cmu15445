@@ -53,6 +53,11 @@ class Optimizer {
    */
   auto OptimizeNLJAsHashJoin(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef;
 
+  void GetHashKeyExpr(const bustub::AbstractExpressionRef &filter_predicate,
+                      std::vector<AbstractExpressionRef> &left_key_expressions,
+                      std::vector<AbstractExpressionRef> &right_key_expressions,
+                      const bustub::AbstractPlanNodeRef &nlj_plan, bool &can_be_as_hash_join);
+
   /**
    * @brief optimize nested loop join into index join.
    */
