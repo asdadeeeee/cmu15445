@@ -13,15 +13,14 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 #include <utility>
 #include <vector>
-#include <unordered_map>
 #include "common/util/hash_util.h"
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
 #include "execution/plans/hash_join_plan.h"
 #include "storage/table/tuple.h"
-
 
 /** AggregateKey represents a key in an aggregation operation */
 namespace bustub {
