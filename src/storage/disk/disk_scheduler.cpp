@@ -37,7 +37,14 @@ DiskScheduler::~DiskScheduler() {
 }
 
 void DiskScheduler::Schedule(DiskRequest r) { request_queue_.Put(std::move(r)); }
-
+//  void DiskScheduler::Schedule(DiskRequest r) {
+//    if (r.is_write_) {
+//       disk_manager_->WritePage(r.page_id_, r.data_);
+//     } else {
+//       disk_manager_->ReadPage(r.page_id_, r.data_);
+//     }
+//     r.callback_.set_value(true);
+// }
 void DiskScheduler::ProcessRequest(const std::shared_ptr<DiskRequest> &r) {
   // 添加正在写的pageID vector 解决写后读一致性
   while (true) {
