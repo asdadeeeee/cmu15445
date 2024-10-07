@@ -17,10 +17,13 @@
 #include <vector>
 
 #include "buffer/buffer_pool_manager.h"
+#include "execution/executors/topn_per_group_executor.h"
 #include "gtest/gtest.h"
 #include "logging/common.h"
 #include "storage/table/table_heap.h"
 #include "storage/table/tuple.h"
+#include "type/value.h"
+#include "type/value_factory.h"
 
 namespace bustub {
 // NOLINTNEXTLINE
@@ -61,4 +64,66 @@ TEST(TupleTest, DISABLED_TableHeapTest) {
   delete disk_manager;
 }
 
+TEST(RankTest, SampleTest) {
+  std::vector<std::pair<OrderByType, AbstractExpressionRef>> order_bys;
+  AbstractExpressionRef ref = nullptr;
+  order_bys.emplace_back(OrderByType::ASC, ref);
+  RankTracker rank_tracker{order_bys};
+  Value v1 = ValueFactory::GetIntegerValue(1);
+  Value v2 = ValueFactory::GetIntegerValue(2);
+  Value v3 = ValueFactory::GetIntegerValue(3);
+  Value v4 = ValueFactory::GetIntegerValue(4);
+  Value v5 = ValueFactory::GetIntegerValue(5);
+  std::vector<Value> rankvalues1 = {v1};
+  std::vector<Value> rankvalues2 = {v2};
+  std::vector<Value> rankvalues3 = {v3};
+  std::vector<Value> rankvalues4 = {v4};
+  std::vector<Value> rankvalues5 = {v5};
+  RankValue rankv1{rankvalues1};
+  RankValue rankv2{rankvalues2};
+  RankValue rankv3{rankvalues3};
+  RankValue rankv4{rankvalues4};
+  RankValue rankv5{rankvalues5};
+  rank_tracker.Insert(rankv1);
+  rank_tracker.Insert(rankv1);
+  rank_tracker.Insert(rankv2);
+  rank_tracker.Insert(rankv2);
+  rank_tracker.Insert(rankv3);
+  rank_tracker.Insert(rankv4);
+  rank_tracker.Insert(rankv4);
+  rank_tracker.Insert(rankv4);
+  EXPECT_EQ(1, rank_tracker.GetRank(rankv1));
+  EXPECT_EQ(3, rank_tracker.GetRank(rankv2));
+  EXPECT_EQ(5, rank_tracker.GetRank(rankv3));
+  EXPECT_EQ(6, rank_tracker.GetRank(rankv4));
+  rank_tracker.Remove(rankv2);
+  EXPECT_EQ(1, rank_tracker.GetRank(rankv1));
+  EXPECT_EQ(3, rank_tracker.GetRank(rankv2));
+  EXPECT_EQ(4, rank_tracker.GetRank(rankv3));
+  EXPECT_EQ(5, rank_tracker.GetRank(rankv4));
+  rank_tracker.Remove(rankv2);
+  EXPECT_EQ(1, rank_tracker.GetRank(rankv1));
+  EXPECT_EQ(-1, rank_tracker.GetRank(rankv2));
+  EXPECT_EQ(3, rank_tracker.GetRank(rankv3));
+  EXPECT_EQ(4, rank_tracker.GetRank(rankv4));
+  rank_tracker.Insert(rankv1);
+  rank_tracker.Insert(rankv1);
+  rank_tracker.Insert(rankv5);
+  rank_tracker.Insert(rankv5);
+  rank_tracker.Insert(rankv2);
+  rank_tracker.Insert(rankv2);
+  rank_tracker.Insert(rankv3);
+  rank_tracker.Insert(rankv4);
+  rank_tracker.Insert(rankv4);
+  EXPECT_EQ(1, rank_tracker.GetRank(rankv1));
+  EXPECT_EQ(5, rank_tracker.GetRank(rankv2));
+  EXPECT_EQ(7, rank_tracker.GetRank(rankv3));
+  EXPECT_EQ(9, rank_tracker.GetRank(rankv4));
+  EXPECT_EQ(14, rank_tracker.GetRank(rankv5));
+  EXPECT_EQ(14, rank_tracker.GetMostRank());
+  rank_tracker.Remove(rankv5);
+  EXPECT_EQ(14, rank_tracker.GetMostRank());
+  rank_tracker.Remove(rankv5);
+  EXPECT_EQ(9, rank_tracker.GetMostRank());
+}
 }  // namespace bustub

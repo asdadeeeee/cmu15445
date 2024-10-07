@@ -21,6 +21,8 @@
 #include "catalog/catalog.h"
 #include "execution/expressions/abstract_expression.h"
 #include "execution/plans/abstract_plan.h"
+#include "fmt/format.h"
+#include "fmt/ranges.h"
 
 namespace bustub {
 
@@ -37,9 +39,11 @@ class TopNPerGroupPlanNode : public AbstractPlanNode {
    * @param order_bys The sort expressions and their order by types.
    * @param n Retain n elements.
    */
-  TopNPerGroupPlanNode(SchemaRef output, AbstractPlanNodeRef child, std::vector<AbstractExpressionRef> group_bys,
+  TopNPerGroupPlanNode(SchemaRef output, AbstractPlanNodeRef child, std::vector<AbstractExpressionRef> columns,
+                       std::vector<AbstractExpressionRef> group_bys,
                        std::vector<std::pair<OrderByType, AbstractExpressionRef>> order_bys, std::size_t n)
       : AbstractPlanNode(std::move(output), {std::move(child)}),
+        columns_(std::move(columns)),
         order_bys_(std::move(order_bys)),
         group_bys_(std::move(group_bys)),
         n_{n} {}
@@ -56,6 +60,9 @@ class TopNPerGroupPlanNode : public AbstractPlanNode {
   /** @return Get group by expressions */
   auto GetGroupBy() const -> const std::vector<AbstractExpressionRef> & { return group_bys_; }
 
+  /** all columns expressions */
+  std::vector<AbstractExpressionRef> columns_;
+
   /** @return The child plan node */
   auto GetChildPlan() const -> AbstractPlanNodeRef {
     BUSTUB_ASSERT(GetChildren().size() == 1, "TopNPerGroup should have exactly one child plan.");
@@ -69,7 +76,9 @@ class TopNPerGroupPlanNode : public AbstractPlanNode {
   std::size_t n_;
 
  protected:
-  auto PlanNodeToString() const -> std::string override { return "TopNPerGroupPlan PlanNodeToString Not Implemented"; };
+  auto PlanNodeToString() const -> std::string override {
+    return fmt::format("TopNPerGroup {{ n={}, order_bys={}, group_bys_={} }}", n_, order_bys_, group_bys_);
+  };
 };
 
 }  // namespace bustub

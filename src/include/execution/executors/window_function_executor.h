@@ -12,7 +12,6 @@
 
 #pragma once
 
-#include <bits/iterator_concepts.h>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -73,27 +72,28 @@ class SimpleWindowHashTable {
    * @param[out] result The output aggregate value
    * @param input The input value
    */
-  void CombineAggregateValues(Value *result, const Value &input) {
+  void CombineAggregateValues(const AggregateKey &key, const Value &input) {
     switch (window_type_) {
       case WindowFunctionType::CountStarAggregate: {
-        *result = result->Add(input);
+        ht_[key] = ht_[key].Add(input);
         break;
       }
       case WindowFunctionType::Rank: {
         if (!input.IsNull()) {
-          if (intend_rank_.GetTypeId() == TypeId::INVALID) {
-            intend_rank_ = ValueFactory::GetIntegerValue(1);
-            *result = intend_rank_;
-            curr_rank_value_ = input;
+          if (intend_rank_.count(key) == 0) {
+            Value v = ValueFactory::GetIntegerValue(1);
+            intend_rank_.insert({key, v});
+            ht_[key] = intend_rank_.at(key);
+            curr_rank_value_.insert({key, input});
           } else {
-            if (curr_rank_value_.CompareEquals(input) == CmpBool::CmpTrue ||
-                curr_rank_value_.CompareEquals(input) == CmpBool::CmpFalse) {
+            if (curr_rank_value_.at(key).CompareEquals(input) == CmpBool::CmpTrue ||
+                curr_rank_value_.at(key).CompareEquals(input) == CmpBool::CmpFalse) {
               Value v1 = ValueFactory::GetIntegerValue(1);
-              intend_rank_ = intend_rank_.Add(v1);
+              intend_rank_[key] = intend_rank_[key].Add(v1);
             }
-            if (curr_rank_value_.CompareEquals(input) == CmpBool::CmpFalse) {
-              *result = intend_rank_;
-              curr_rank_value_ = input;
+            if (curr_rank_value_.at(key).CompareEquals(input) == CmpBool::CmpFalse) {
+              ht_[key] = intend_rank_.at(key);
+              curr_rank_value_[key] = input;
             }
           }
         }
@@ -101,41 +101,41 @@ class SimpleWindowHashTable {
       }
       case WindowFunctionType::CountAggregate: {
         if (!input.IsNull()) {
-          if (result->IsNull()) {
-            *result = ValueFactory::GetIntegerValue(1);
+          if (ht_[key].IsNull()) {
+            ht_[key] = ValueFactory::GetIntegerValue(1);
           } else {
             Value v1 = ValueFactory::GetIntegerValue(1);
-            *result = result->Add(v1);
+            ht_[key] = ht_[key].Add(v1);
           }
         }
         break;
       }
       case WindowFunctionType::SumAggregate: {
         if (!input.IsNull()) {
-          if (result->IsNull()) {
-            *result = input;
+          if (ht_[key].IsNull()) {
+            ht_[key] = input;
           } else {
-            *result = result->Add(input);
+            ht_[key] = ht_[key].Add(input);
           }
         }
         break;
       }
       case WindowFunctionType::MinAggregate: {
         if (!input.IsNull()) {
-          if (result->IsNull()) {
-            *result = input;
+          if (ht_[key].IsNull()) {
+            ht_[key] = input;
           } else {
-            *result = result->Min(input);
+            ht_[key] = ht_[key].Min(input);
           }
         }
         break;
       }
       case WindowFunctionType::MaxAggregate: {
         if (!input.IsNull()) {
-          if (result->IsNull()) {
-            *result = input;
+          if (ht_[key].IsNull()) {
+            ht_[key] = input;
           } else {
-            *result = result->Max(input);
+            ht_[key] = ht_[key].Max(input);
           }
         }
         break;
@@ -156,7 +156,7 @@ class SimpleWindowHashTable {
       ht_.insert({agg_key, GenerateInitialAggregateValue()});
     }
 
-    CombineAggregateValues(&ht_[agg_key], val);
+    CombineAggregateValues(agg_key, val);
   }
 
   void InitInsert(const AggregateKey &agg_key) {
@@ -175,7 +175,11 @@ class SimpleWindowHashTable {
   /**
    * Clear the hash table
    */
-  void Clear() { ht_.clear(); }
+  void Clear() {
+    ht_.clear();
+    curr_rank_value_.clear();
+    intend_rank_.clear();
+  }
 
   /** An iterator over the aggregation hash table */
   class Iterator {
@@ -220,8 +224,10 @@ class SimpleWindowHashTable {
   /** The types of aggregations that we have */
   const WindowFunctionType &window_type_;
 
-  Value curr_rank_value_;
-  Value intend_rank_;
+  std::unordered_map<AggregateKey, Value> curr_rank_value_{};
+  std::unordered_map<AggregateKey, Value> intend_rank_{};
+  // Value curr_rank_value_;
+  // Value intend_rank_;
 };
 
 /**
