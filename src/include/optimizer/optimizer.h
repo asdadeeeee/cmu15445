@@ -58,6 +58,20 @@ class Optimizer {
                       std::vector<AbstractExpressionRef> &right_key_expressions,
                       const bustub::AbstractPlanNodeRef &nlj_plan, bool &can_be_as_hash_join);
 
+  void GetPredicateExpr(const bustub::AbstractExpressionRef &filter_predicate,
+                        std::vector<AbstractExpressionRef> &root_predicate_expressions,
+                        std::vector<AbstractExpressionRef> &left_predicate_expressions,
+                        std::vector<AbstractExpressionRef> &right_predicate_expressions, bool &have_or);
+
+  auto GatherPredicate(bustub::AbstractExpressionRef &predicate,
+                       std::vector<AbstractExpressionRef> &predicate_expressions) -> bool;
+
+  void RewriteNLJpredicacte(AbstractPlanNode &nlj_plan_node);
+
+  auto CombinePredicate(const bustub::AbstractExpressionRef &left_predicate,
+                        const bustub::AbstractExpressionRef &right_predicate, bool &can_be_combine)
+      -> AbstractExpressionRef;
+
   /**
    * @brief optimize nested loop join into index join.
    */
