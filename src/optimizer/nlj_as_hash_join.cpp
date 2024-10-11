@@ -72,6 +72,8 @@ void Optimizer::GetHashKeyExpr(const bustub::AbstractExpressionRef &filter_predi
         } else {
           can_be_as_hash_join = false;
         }
+      } else {
+        can_be_as_hash_join = false;
       }
     } else {
       can_be_as_hash_join = false;
