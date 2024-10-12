@@ -12,9 +12,7 @@ WindowFunctionExecutor::WindowFunctionExecutor(ExecutorContext *exec_ctx, const 
     : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)) {
   for (const auto &window_function : plan_->window_functions_) {
     auto window_table = std::make_unique<SimpleWindowHashTable>(window_function.second.type_);
-    auto iter = window_table->Begin();
     hts_.insert({window_function.first, std::move(window_table)});
-    iters_.insert({window_function.first, iter});
     if (!window_function.second.order_by_.empty() && !order_by_func_idx_.has_value()) {
       order_by_func_idx_ = window_function.first;
     }

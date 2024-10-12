@@ -25,11 +25,11 @@ void TopNExecutor::Init() {
       }
     }
     while (!top_entries_.empty()) {
-      results_.emplace_back(top_entries_.top());
+      results_.insert(results_.begin(), top_entries_.top());
       top_entries_.pop();
     }
-    SortExecutor::Cmp cmp(plan_->GetOrderBy(), plan_->OutputSchema());
-    std::sort(results_.begin(), results_.end(), cmp);
+    // SortExecutor::Cmp cmp(plan_->GetOrderBy(), plan_->OutputSchema());
+    // std::sort(results_.begin(), results_.end(), cmp);
   }
   results_iter_ = results_.begin();
 }

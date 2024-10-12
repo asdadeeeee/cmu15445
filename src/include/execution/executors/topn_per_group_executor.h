@@ -178,24 +178,6 @@ class RankTracker {
 
 }  // namespace bustub
 
-namespace std {
-
-/** Implements std::hash on AggregateKey */
-template <>
-struct hash<bustub::RankValue> {
-  auto operator()(const bustub::RankValue &rank_val) const -> std::size_t {
-    size_t curr_hash = 0;
-    for (const auto &val : rank_val.rank_vals_) {
-      if (!val.IsNull()) {
-        curr_hash = bustub::HashUtil::CombineHashes(curr_hash, bustub::HashUtil::HashValue(&val));
-      }
-    }
-    return curr_hash;
-  }
-};
-
-}  // namespace std
-
 namespace bustub {
 
 /**
@@ -272,9 +254,6 @@ class TopNPerGroupExecutor : public AbstractExecutor {
   std::unique_ptr<AbstractExecutor> child_executor_;
   std::unordered_map<AggregateKey, std::priority_queue<Tuple, std::vector<Tuple>, SortExecutor::Cmp>> top_entries_{};
   std::unordered_map<AggregateKey, std::unique_ptr<RankTracker>> rank_trackers_;
-  // std::unordered_map<AggregateKey, RankValue> top_value_{};
-  // std::unordered_map<AggregateKey, std::unordered_set<RankValue>> diff_value_{};
-  // std::unordered_map<AggregateKey, size_t> curr_k_{};
 
   std::unordered_map<AggregateKey, std::vector<Tuple>> top_tuples_{};
 

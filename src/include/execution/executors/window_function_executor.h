@@ -318,7 +318,6 @@ class WindowFunctionExecutor : public AbstractExecutor {
   std::unique_ptr<AbstractExecutor> child_executor_;
 
   std::unordered_map<uint32_t, std::unique_ptr<SimpleWindowHashTable>> hts_;
-  std::unordered_map<uint32_t, SimpleWindowHashTable::Iterator> iters_;
   std::optional<uint32_t> order_by_func_idx_ = std::nullopt;
 
   std::vector<Tuple> child_tuples_;

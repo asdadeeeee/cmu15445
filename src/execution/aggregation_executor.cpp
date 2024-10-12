@@ -31,14 +31,17 @@ void AggregationExecutor::Init() {
   Tuple agg_tuple;
   RID agg_rid;
   aht_->Clear();
-  if (plan_->group_bys_.empty()) {
-    AggregateKey agg_key;
-    aht_->InitInsert(agg_key);
-  }
+  bool have_val = false;
   while (child_executor_->Next(&agg_tuple, &agg_rid)) {
     AggregateKey agg_key = MakeAggregateKey(&agg_tuple);
     AggregateValue agg_value = MakeAggregateValue(&agg_tuple);
     aht_->InsertCombine(agg_key, agg_value);
+    have_val = true;
+  }
+  // 无groupby 且无tuple 才为0或null  否则输出空(mysql为empty set)
+  if (!have_val && plan_->group_bys_.empty()) {
+    AggregateKey agg_key;
+    aht_->InitInsert(agg_key);
   }
   aht_iterator_ = aht_->Begin();
 }

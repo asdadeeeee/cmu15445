@@ -46,7 +46,6 @@ void TopNPerGroupExecutor::Init() {
           const auto &col_val = dynamic_cast<const ColumnValueExpression &>(*output_column);
           if (col_val.GetColIdx() == static_cast<uint32_t>(-1)) {
             auto v = ValueFactory::GetIntegerValue(rank_trackers_.at(top_entry.first)->GetMostRank());
-            // auto v = ValueFactory::GetIntegerValue(curr_k_.at(top_entry.first));
             result_value.emplace_back(std::move(v));
           } else {
             result_value.emplace_back(
