@@ -16,6 +16,12 @@ auto ReconstructTuple(const Schema *schema, const Tuple &base_tuple, const Tuple
 void TxnMgrDbg(const std::string &info, TransactionManager *txn_mgr, const TableInfo *table_info,
                TableHeap *table_heap);
 
+auto GetUndoLogSchema(const Schema *&schema, const UndoLog &undo_log) -> Schema;
+
+auto CanTupleBeSeen(timestamp_t tuple_ts, Transaction *txn) -> bool;
+
+auto CollectUndoLogs(const TupleMeta &base_meta, TransactionManager *txn_mgr, Transaction *curr_trx, RID rid)
+    -> std::vector<UndoLog>;
 // Add new functions as needed... You are likely need to define some more functions.
 //
 // To give you a sense of what can be shared across executors / transaction manager, here are the

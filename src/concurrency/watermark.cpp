@@ -11,34 +11,29 @@ auto Watermark::AddTxn(timestamp_t read_ts) -> void {
     throw Exception("read ts < commit ts");
   }
   auto iter = current_reads_.find(read_ts);
-  if(iter!= current_reads_.end())
-  {
+  if (iter != current_reads_.end()) {
     iter->second++;
+  } else {
+    current_reads_.emplace(read_ts, 1);
   }
-  else {
-    current_reads_.emplace(read_ts,1);
-  }
-  if(!current_reads_.empty()){
+  if (!current_reads_.empty()) {
     watermark_ = current_reads_.begin()->first;
   }
 }
 
 auto Watermark::RemoveTxn(timestamp_t read_ts) -> void {
   auto iter = current_reads_.find(read_ts);
-  if(iter!= current_reads_.end())
-  {
-    if(iter->second > 1){
+  if (iter != current_reads_.end()) {
+    if (iter->second > 1) {
       iter->second--;
-    }
-    else {
+    } else {
       current_reads_.erase(iter);
     }
-  }
-  else {
+  } else {
     throw Exception("read_ts not exist");
   }
 
-  if(!current_reads_.empty()){
+  if (!current_reads_.empty()) {
     watermark_ = current_reads_.begin()->first;
   }
 }

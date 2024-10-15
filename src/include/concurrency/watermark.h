@@ -37,7 +37,7 @@ class Watermark {
 
   timestamp_t watermark_;
 
-  std::map<timestamp_t,int> current_reads_;
+  std::map<timestamp_t, int> current_reads_;
 };
 
 };  // namespace bustub
