@@ -69,6 +69,14 @@ auto TransactionManager::Commit(Transaction *txn) -> bool {
   }
 
   // TODO(fall2023): Implement the commit logic!
+  for (const auto &write_table : txn->write_set_) {
+    TableInfo *table_info = catalog_->GetTable(write_table.first);
+    for (const auto &write_rid : write_table.second) {
+      bool if_delete = table_info->table_->GetTupleMeta(write_rid).is_deleted_;
+      TupleMeta commit_tuple_meta{commit_ts, if_delete};
+      table_info->table_->UpdateTupleMeta(commit_tuple_meta, write_rid);
+    }
+  }
 
   std::unique_lock<std::shared_mutex> lck(txn_map_mutex_);
 

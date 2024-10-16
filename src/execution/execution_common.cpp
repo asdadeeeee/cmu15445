@@ -70,26 +70,31 @@ void TxnMgrDbg(const std::string &info, TransactionManager *txn_mgr, const Table
     auto undo_link = txn_mgr->GetUndoLink(table_iter.GetRID());
     const Schema *schema_ptr = &(table_info->schema_);
     while (undo_link.has_value() && undo_link->IsValid()) {
+      auto txn_iter = txn_mgr->txn_map_.find(undo_link->prev_txn_);
+      if (txn_iter == txn_mgr->txn_map_.end()) {
+        fmt::println(stderr, "txn not exist");
+        return;
+      }
       auto undo_log = txn_mgr->GetUndoLog(undo_link.value());
       auto undo_schema = GetUndoLogSchema(schema_ptr, undo_log);
       std::string tuple_str;
       if (!undo_log.is_deleted_) {
         tuple_str += "(";
         uint32_t undo_val_idx = 0;
-        auto modify_iter = undo_log.modified_fields_.begin();
-        while (modify_iter != undo_log.modified_fields_.end()) {
-          if (*modify_iter) {
+        for (const auto &if_modify : undo_log.modified_fields_) {
+          if (if_modify) {
             tuple_str += undo_log.tuple_.GetValue(&undo_schema, undo_val_idx).ToString() + ",";
             undo_val_idx++;
           } else {
             tuple_str += " _,";
           }
-          modify_iter++;
         }
         tuple_str += " )";
-        fmt::println(stderr, "    txn{}, {} ts={}", undo_link->prev_txn_ ^ TXN_START_ID, tuple_str, undo_log.ts_);
+        fmt::println(stderr, "    txn{}@{}, {} ts={}", txn_iter->second->GetTransactionIdHumanReadable(),
+                     txn_iter->second->GetTransactionState(), tuple_str, undo_log.ts_);
       } else {
-        fmt::println(stderr, "    txn{}, <del> ts={}", undo_link->prev_txn_ ^ TXN_START_ID, undo_log.ts_);
+        fmt::println(stderr, "    txn{}@{}, <del> ts={}", txn_iter->second->GetTransactionIdHumanReadable(),
+                     txn_iter->second->GetTransactionState(), undo_log.ts_);
       }
       undo_link = undo_log.prev_version_;
     }
@@ -141,7 +146,7 @@ auto CollectUndoLogs(const TupleMeta &base_meta, TransactionManager *txn_mgr, Tr
   auto undo_link = txn_mgr->GetUndoLink(rid);
   while (undo_link.has_value() && undo_link->IsValid()) {
     auto undo_log = txn_mgr->GetUndoLog(undo_link.value());
-    undo_logs.emplace_back(std::move(undo_log));
+    undo_logs.emplace_back(undo_log);
     if (CanTupleBeSeen(undo_log.ts_, curr_trx)) {
       return undo_logs;
     }

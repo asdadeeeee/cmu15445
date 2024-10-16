@@ -29,6 +29,8 @@ InsertExecutor::InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *
 void InsertExecutor::Init() {
   child_executor_->Init();
   if_executed_ = false;
+  txn_ = exec_ctx_->GetTransaction();
+  txn_mgr_ = exec_ctx_->GetTransactionManager();
 }
 
 auto InsertExecutor::Next(Tuple *tuple, RID *rid) -> bool {
@@ -44,7 +46,8 @@ auto InsertExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   RID temp_rid;
   std::vector<RID> temp_inserted_rids;
   while (child_executor_->Next(&insert_tuple, &temp_rid)) {
-    TupleMeta insert_tuple_meta{INVALID_TS, false};
+    // TupleMeta insert_tuple_meta{INVALID_TS, false};
+    TupleMeta insert_tuple_meta{txn_->GetTransactionTempTs(), false};
     auto inserted_rid = table_info->table_->InsertTuple(insert_tuple_meta, insert_tuple, exec_ctx_->GetLockManager(),
                                                         exec_ctx_->GetTransaction(), insert_table_oid);
     if (!inserted_rid.has_value()) {
@@ -63,11 +66,16 @@ auto InsertExecutor::Next(Tuple *tuple, RID *rid) -> bool {
       }
     }
   }
+
   Value ret_value = ValueFactory::GetIntegerValue(temp_inserted_rids.size());
   std::vector<Value> ret_value_vec;
   ret_value_vec.reserve(GetOutputSchema().GetColumnCount());
   ret_value_vec.emplace_back(ret_value);
   *tuple = Tuple{ret_value_vec, &GetOutputSchema()};
+
+  for (const auto insert_rid : temp_inserted_rids) {
+    txn_->AppendWriteSet(table_info->oid_, insert_rid);
+  }
   return true;
 }
 
