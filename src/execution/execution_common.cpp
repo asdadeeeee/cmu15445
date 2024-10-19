@@ -73,7 +73,7 @@ void TxnMgrDbg(const std::string &info, TransactionManager *txn_mgr, const Table
       auto txn_iter = txn_mgr->txn_map_.find(undo_link->prev_txn_);
       if (txn_iter == txn_mgr->txn_map_.end()) {
         fmt::println(stderr, "txn not exist");
-        return;
+        break;
       }
       auto undo_log = txn_mgr->GetUndoLog(undo_link.value());
       auto undo_schema = GetUndoLogSchema(schema_ptr, undo_log);

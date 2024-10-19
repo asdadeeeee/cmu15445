@@ -18,6 +18,7 @@
 #include <shared_mutex>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "catalog/catalog.h"
 #include "catalog/column.h"
@@ -102,6 +103,44 @@ void TransactionManager::Abort(Transaction *txn) {
   running_txns_.RemoveTxn(txn->read_ts_);
 }
 
-void TransactionManager::GarbageCollection() { UNIMPLEMENTED("not implemented"); }
+void TransactionManager::GarbageCollection() {
+  // std::unique_lock<std::shared_mutex> lck(txn_map_mutex_);
+  auto all_table_names = catalog_->GetTableNames();
+  std::set<txn_id_t> useful_txn_ids;
+  for (const auto &table_name : all_table_names) {
+    auto table_info = catalog_->GetTable(table_name);
+    auto table_iter = table_info->table_->MakeIterator();
+    while (!table_iter.IsEnd()) {
+      auto base_meta = table_info->table_->GetTupleMeta(table_iter.GetRID());
+      if (base_meta.ts_ > GetWatermark()) {
+        auto undo_link = GetUndoLink(table_iter.GetRID());
+        while (undo_link.has_value() && undo_link->IsValid()) {
+          auto undo_log = GetUndoLogOptional(undo_link.value());
+          if (undo_log.has_value()) {
+            useful_txn_ids.insert(undo_link->prev_txn_);
+            if (undo_log->ts_ <= GetWatermark()) {
+              break;
+            }
+            undo_link = undo_log->prev_version_;
+          } else {
+            break;
+          }
+        }
+      }
+
+      ++table_iter;
+    }
+  }
+  auto iter = txn_map_.begin();
+  while (iter != txn_map_.end()) {
+    if (useful_txn_ids.find(iter->first) == useful_txn_ids.end() &&
+        (iter->second->GetTransactionState() == TransactionState::ABORTED ||
+         iter->second->GetTransactionState() == TransactionState::COMMITTED)) {
+      txn_map_.erase(iter++);
+    } else {
+      iter++;
+    }
+  }
+}
 
 }  // namespace bustub

@@ -30,6 +30,8 @@ auto IsWriteWriteConflict(std::optional<UndoLink> /*unused*/) -> bool;
 // list of helper function names that we defined in the reference solution. You should come up with
 // your own when you go through the process.
 // * CollectUndoLogs /done
+
+// todo(zhouzj) 应该要有这个，声明里加回调函数，所有需要遍历undo的功能都调这个
 // * WalkUndoLogs
 // * Modify
 // * IsWriteWriteConflict

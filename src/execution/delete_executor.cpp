@@ -53,7 +53,7 @@ auto DeleteExecutor::Next(Tuple *tuple, RID *rid) -> bool {
     // 加入写集
     txn_->AppendWriteSet(table_info->oid_, delete_rid);
 
-    // 如果ts不等 说明该txn_没有修改过这个tuple，那么需要构造undo  否则不需要
+    // 如果ts不等 说明该txn_没有修改过这个tuple，那么需要构造undo,并update
     if (base_meta.ts_ != txn_->GetTransactionTempTs()) {
       std::vector<bool> modified_fields(table_info->schema_.GetColumnCount(), true);
       auto pre_undo_link = txn_mgr_->GetUndoLink(delete_rid);
@@ -64,6 +64,32 @@ auto DeleteExecutor::Next(Tuple *tuple, RID *rid) -> bool {
       auto undo_link = txn_->AppendUndoLog(
           {UndoLog{false, std::move(modified_fields), delete_tuple, base_meta.ts_, *pre_undo_link}});
       txn_mgr_->UpdateUndoLink(delete_rid, undo_link);
+    } else {
+      auto pre_undo_link = txn_mgr_->GetUndoLink(delete_rid);
+      if (pre_undo_link.has_value() && pre_undo_link->IsValid()) {
+        auto pre_undo_log = txn_mgr_->GetUndoLog(*pre_undo_link);
+        std::vector<Value> old_values;
+        std::vector<bool> modified_fields(table_info->schema_.GetColumnCount(), false);
+        const Schema *schema_ptr = &table_info->schema_;
+        auto prev_undo_schema = GetUndoLogSchema(schema_ptr, pre_undo_log);
+        uint32_t undo_val_idx = 0;
+        for (size_t i = 0; i < table_info->schema_.GetColumnCount(); i++) {
+          Value old_value;
+          if (pre_undo_log.modified_fields_.at(i)) {
+            old_value = pre_undo_log.tuple_.GetValue(&prev_undo_schema, undo_val_idx);
+            undo_val_idx++;
+
+          } else {
+            old_value = delete_tuple.GetValue(&table_info->schema_, i);
+          }
+          modified_fields.at(i) = true;
+          old_values.emplace_back(std::move(old_value));
+        }
+        auto undo_schema = ConstructUndoLogSchema(schema_ptr, modified_fields);
+        Tuple undo_tuple{old_values, &undo_schema};
+        UndoLog undolog{false, std::move(modified_fields), undo_tuple, pre_undo_log.ts_, pre_undo_log.prev_version_};
+        txn_->ModifyUndoLog(pre_undo_link->prev_log_idx_, undolog);
+      }
     }
 
     // 索引删除
