@@ -58,4 +58,27 @@ auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   return false;
 }
 
+// p3
+// auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
+//   while (!table_iter_->IsEnd()) {
+//     auto tuple_pair = table_iter_->GetTuple();
+//     if (tuple_pair.first.is_deleted_) {
+//       ++(*table_iter_);
+//       continue;
+//     }
+//     // 添加predicate
+//     if (plan_->filter_predicate_ != nullptr) {
+//       auto value = plan_->filter_predicate_->Evaluate(&tuple_pair.second, GetOutputSchema());
+//       if (!value.IsNull() && !value.GetAs<bool>()) {
+//         ++(*table_iter_);
+//         continue;
+//       }
+//     }
+//     *tuple = Tuple(tuple_pair.second);
+//     *rid = RID(table_iter_->GetRID().GetPageId(), table_iter_->GetRID().GetSlotNum());
+//     ++(*table_iter_);
+//     return true;
+//   }
+//   return false;
+// }
 }  // namespace bustub

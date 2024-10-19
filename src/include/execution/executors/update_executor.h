@@ -16,6 +16,7 @@
 #include <utility>
 #include <vector>
 
+#include "concurrency/transaction_manager.h"
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
 #include "execution/plans/update_plan.h"
@@ -52,7 +53,7 @@ class UpdateExecutor : public AbstractExecutor {
    *
    * NOTE: UpdateExecutor::Next() does not use the `rid` out-parameter.
    */
-  auto Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool override;
+  auto Next(Tuple *tuple, RID *rid) -> bool override;
 
   /** @return The output schema for the update */
   auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); }
@@ -69,7 +70,11 @@ class UpdateExecutor : public AbstractExecutor {
 
   /** The child executor to obtain value from */
   std::unique_ptr<AbstractExecutor> child_executor_;
-
+  std::vector<std::pair<RID, Tuple>> child_tuples_;
+  std::vector<IndexInfo *> table_indexs_;
+  std::vector<RID> temp_updated_rids_;
+  TransactionManager *txn_mgr_;
+  Transaction *txn_;
   bool if_executed_;
 };
 }  // namespace bustub

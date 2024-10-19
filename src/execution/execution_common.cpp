@@ -123,6 +123,16 @@ void TxnMgrDbg(const std::string &info, TransactionManager *txn_mgr, const Table
   //   txn3@1 (7, _, _) ts=1
 }
 
+auto ConstructUndoLogSchema(const Schema *&schema, const std::vector<bool> &modified_fields) -> Schema {
+  std::vector<uint32_t> undo_column_idxs;
+  for (uint32_t idx = 0; idx < schema->GetColumnCount(); idx++) {
+    if (modified_fields[idx]) {
+      undo_column_idxs.emplace_back(idx);
+    }
+  }
+  return Schema::CopySchema(schema, undo_column_idxs);
+}
+
 auto GetUndoLogSchema(const Schema *&schema, const UndoLog &undo_log) -> Schema {
   std::vector<uint32_t> undo_column_idxs;
   for (uint32_t idx = 0; idx < schema->GetColumnCount(); idx++) {
@@ -157,4 +167,6 @@ auto CollectUndoLogs(const TupleMeta &base_meta, TransactionManager *txn_mgr, Tr
   undo_logs.emplace_back(std::move(delete_undo_log));
   return undo_logs;
 }
+
+auto IsWriteWriteConflict(std::optional<UndoLink> /*unused*/) -> bool { return true; }
 }  // namespace bustub
