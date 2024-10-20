@@ -46,6 +46,20 @@ auto InsertExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   RID temp_rid;
   std::vector<RID> temp_inserted_rids;
   while (child_executor_->Next(&insert_tuple, &temp_rid)) {
+    for (auto &index : table_indexs) {
+      Tuple index_tuple =
+          insert_tuple.KeyFromTuple(table_info->schema_, index->key_schema_, index->index_->GetKeyAttrs());
+      std::vector<RID> exist_rids;
+      exist_rids.clear();
+      index->index_->ScanKey(index_tuple, &exist_rids, txn_);
+      if (!exist_rids.empty()) {
+        // UndoInsert(temp_inserted_rids);
+        txn_->SetTainted();
+        throw bustub::ExecutionException("insert failed exist duplicate index before make heap tuple");
+        return false;
+      }
+    }
+
     // TupleMeta insert_tuple_meta{INVALID_TS, false};
     TupleMeta insert_tuple_meta{txn_->GetTransactionTempTs(), false};
     auto inserted_rid = table_info->table_->InsertTuple(insert_tuple_meta, insert_tuple, exec_ctx_->GetLockManager(),
@@ -60,8 +74,9 @@ auto InsertExecutor::Next(Tuple *tuple, RID *rid) -> bool {
       Tuple index_tuple =
           insert_tuple.KeyFromTuple(table_info->schema_, index->key_schema_, index->index_->GetKeyAttrs());
       if (!index->index_->InsertEntry(index_tuple, inserted_rid.value(), exec_ctx_->GetTransaction())) {
-        UndoInsert(temp_inserted_rids);
-        throw bustub::Exception("insert failed duplicate index");
+        // UndoInsert(temp_inserted_rids);
+        txn_->SetTainted();
+        throw bustub::ExecutionException("insert failed exist duplicate index when insert index after make heap tuple");
         return false;
       }
     }
