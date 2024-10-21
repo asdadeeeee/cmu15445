@@ -76,6 +76,10 @@ auto TransactionManager::Commit(Transaction *txn) -> bool {
       bool if_delete = table_info->table_->GetTupleMeta(write_rid).is_deleted_;
       TupleMeta commit_tuple_meta{commit_ts, if_delete};
       table_info->table_->UpdateTupleMeta(commit_tuple_meta, write_rid);
+      auto version_link = GetVersionLink(write_rid);
+      if (version_link.has_value()) {
+        UpdateVersionLink(write_rid, VersionUndoLink{version_link->prev_, false});
+      }
     }
   }
 

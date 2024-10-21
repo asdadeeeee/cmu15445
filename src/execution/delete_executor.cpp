@@ -57,7 +57,11 @@ auto DeleteExecutor::Next(Tuple *tuple, RID *rid) -> bool {
     if (base_meta.ts_ != txn_->GetTransactionTempTs()) {
       auto undo_log = ConstructUndoLogFromBase(table_info, txn_mgr_, delete_rid);
       auto undo_link = txn_->AppendUndoLog(undo_log);
-      txn_mgr_->UpdateUndoLink(delete_rid, undo_link);
+      if (!txn_mgr_->UpdateVersionLink(delete_rid, VersionUndoLink{undo_link, true}, IsWriteWriteNotConflict)) {
+        txn_->SetTainted();
+        throw bustub::ExecutionException("delete failed write conflict");
+        return false;
+      }
     } else {
       auto pre_undo_link = txn_mgr_->GetUndoLink(delete_rid);
       if (pre_undo_link.has_value() && pre_undo_link->IsValid()) {

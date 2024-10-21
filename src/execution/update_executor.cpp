@@ -101,7 +101,12 @@ auto UpdateExecutor::Next(Tuple *tuple, RID *rid) -> bool {
 
         auto undo_link = txn_->AppendUndoLog(
             {UndoLog{false, std::move(modified_fields), undo_tuple, base_meta.ts_, *pre_undo_link}});
-        txn_mgr_->UpdateUndoLink(child_iter->first, undo_link);
+        if (!txn_mgr_->UpdateVersionLink(child_iter->first, VersionUndoLink{undo_link, true},
+                                         IsWriteWriteNotConflict)) {
+          txn_->SetTainted();
+          throw bustub::ExecutionException("update failed write conflict");
+          return false;
+        }
       } else {
         // Compute expressions
         auto pre_undo_link = txn_mgr_->GetUndoLink(child_iter->first);

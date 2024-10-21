@@ -57,6 +57,8 @@ class InsertExecutor : public AbstractExecutor {
  private:
   void UndoInsert(std::vector<RID> &temp_inserted_rids);
 
+  auto HeapInsert(Tuple *insert_tuple, ExecutorContext *exec_ctx_, std::vector<RID> &temp_inserted_rids) -> bool;
+
  private:
   /** The insert plan node to be executed*/
   const InsertPlanNode *plan_;

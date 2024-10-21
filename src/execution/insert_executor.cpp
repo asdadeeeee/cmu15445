@@ -48,59 +48,47 @@ auto InsertExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   RID temp_rid;
   std::vector<RID> temp_inserted_rids;
   while (child_executor_->Next(&insert_tuple, &temp_rid)) {
-    for (auto &index : table_indexs) {
-      Tuple index_tuple =
-          insert_tuple.KeyFromTuple(table_info->schema_, index->key_schema_, index->index_->GetKeyAttrs());
-      std::vector<RID> exist_rids;
-      exist_rids.clear();
-      index->index_->ScanKey(index_tuple, &exist_rids, txn_);
-      if (!exist_rids.empty()) {
-        auto index_iter = exist_rids.begin();
-        while (index_iter != exist_rids.end()) {
-          auto tuple_pair = table_info->table_->GetTuple(*index_iter);
-          if (tuple_pair.first.is_deleted_ && CanTupleBeSeen(tuple_pair.first.ts_, txn_)) {
-            if (tuple_pair.first.ts_ != txn_->GetTransactionTempTs()) {
-              auto undo_log = ConstructUndoLogFromBase(table_info, txn_mgr_, *index_iter);
-              auto undo_link = txn_->AppendUndoLog(undo_log);
-              if (!txn_mgr_->UpdateVersionLink(*index_iter, VersionUndoLink{undo_link, true})) {
-                txn_->SetTainted();
-                throw bustub::ExecutionException("insert failed write conflict");
-                return false;
+    if (!table_indexs.empty()) {
+      for (auto &index : table_indexs) {
+        Tuple index_tuple =
+            insert_tuple.KeyFromTuple(table_info->schema_, index->key_schema_, index->index_->GetKeyAttrs());
+        std::vector<RID> exist_rids;
+        exist_rids.clear();
+        index->index_->ScanKey(index_tuple, &exist_rids, txn_);
+        if (!exist_rids.empty()) {
+          auto index_iter = exist_rids.begin();
+          while (index_iter != exist_rids.end()) {
+            auto tuple_pair = table_info->table_->GetTuple(*index_iter);
+            if (tuple_pair.first.is_deleted_ && CanTupleBeSeen(tuple_pair.first.ts_, txn_)) {
+              if (tuple_pair.first.ts_ != txn_->GetTransactionTempTs()) {
+                auto undo_log = ConstructUndoLogFromBase(table_info, txn_mgr_, *index_iter);
+                auto undo_link = txn_->AppendUndoLog(undo_log);
+                if (!txn_mgr_->UpdateVersionLink(*index_iter, VersionUndoLink{undo_link, true},
+                                                 IsWriteWriteNotConflict)) {
+                  txn_->SetTainted();
+                  throw bustub::ExecutionException("insert failed write conflict");
+                  return false;
+                }
               }
+              TupleMeta update_tuple_meta{txn_->GetTransactionTempTs(), false};
+              table_info->table_->UpdateTupleInPlace(update_tuple_meta, insert_tuple, *index_iter);
+              temp_inserted_rids.emplace_back(*index_iter);
+              index_iter++;
+            } else {
+              txn_->SetTainted();
+              throw bustub::ExecutionException("insert failed exist duplicate index before make heap tuple");
+              return false;
             }
-            TupleMeta update_tuple_meta{txn_->GetTransactionTempTs(), false};
-            table_info->table_->UpdateTupleInPlace(update_tuple_meta, insert_tuple, *index_iter);
-            temp_inserted_rids.emplace_back(*index_iter);
-            index_iter++;
-          } else {
-            txn_->SetTainted();
-            throw bustub::ExecutionException("insert failed exist duplicate index before make heap tuple");
+          }
+        } else {
+          if (!HeapInsert(&insert_tuple, exec_ctx_, temp_inserted_rids)) {
             return false;
           }
         }
-      } else {
-        // TupleMeta insert_tuple_meta{INVALID_TS, false};
-        TupleMeta insert_tuple_meta{txn_->GetTransactionTempTs(), false};
-        auto inserted_rid =
-            table_info->table_->InsertTuple(insert_tuple_meta, insert_tuple, exec_ctx_->GetLockManager(),
-                                            exec_ctx_->GetTransaction(), insert_table_oid);
-        if (!inserted_rid.has_value()) {
-          UndoInsert(temp_inserted_rids);
-          throw bustub::Exception("insert failed has no empty space");
-          return false;
-        }
-        temp_inserted_rids.emplace_back(inserted_rid.value());
-        for (auto &index : table_indexs) {
-          Tuple index_tuple =
-              insert_tuple.KeyFromTuple(table_info->schema_, index->key_schema_, index->index_->GetKeyAttrs());
-          if (!index->index_->InsertEntry(index_tuple, inserted_rid.value(), exec_ctx_->GetTransaction())) {
-            // UndoInsert(temp_inserted_rids);
-            txn_->SetTainted();
-            throw bustub::ExecutionException(
-                "insert failed exist duplicate index when insert index after make heap tuple");
-            return false;
-          }
-        }
+      }
+    } else {
+      if (!HeapInsert(&insert_tuple, exec_ctx_, temp_inserted_rids)) {
+        return false;
       }
     }
   }
@@ -138,7 +126,34 @@ void InsertExecutor::UndoInsert(std::vector<RID> &temp_inserted_rids) {
     table_info->table_->UpdateTupleMeta(inserted_tuple_meta, inserted_rid);
   }
 }
-
+auto InsertExecutor::HeapInsert(Tuple *insert_tuple, ExecutorContext *exec_ctx_, std::vector<RID> &temp_inserted_rids)
+    -> bool {
+  // TupleMeta insert_tuple_meta{INVALID_TS, false};
+  Catalog *catalog = exec_ctx_->GetCatalog();
+  table_oid_t insert_table_oid = plan_->GetTableOid();
+  TableInfo *table_info = catalog->GetTable(insert_table_oid);
+  auto table_indexs = catalog->GetTableIndexes(table_info->name_);
+  TupleMeta insert_tuple_meta{txn_->GetTransactionTempTs(), false};
+  auto inserted_rid = table_info->table_->InsertTuple(insert_tuple_meta, *insert_tuple, exec_ctx_->GetLockManager(),
+                                                      exec_ctx_->GetTransaction(), insert_table_oid);
+  if (!inserted_rid.has_value()) {
+    UndoInsert(temp_inserted_rids);
+    throw bustub::Exception("insert failed has no empty space");
+    return false;
+  }
+  temp_inserted_rids.emplace_back(inserted_rid.value());
+  for (auto &index : table_indexs) {
+    Tuple index_tuple =
+        insert_tuple->KeyFromTuple(table_info->schema_, index->key_schema_, index->index_->GetKeyAttrs());
+    if (!index->index_->InsertEntry(index_tuple, inserted_rid.value(), exec_ctx_->GetTransaction())) {
+      // UndoInsert(temp_inserted_rids);
+      txn_->SetTainted();
+      throw bustub::ExecutionException("insert failed exist duplicate index when insert index after make heap tuple");
+      return false;
+    }
+  }
+  return true;
+}
 // P3
 // auto InsertExecutor::Next(Tuple *tuple, RID *rid) -> bool {
 //   if (if_executed_) {
