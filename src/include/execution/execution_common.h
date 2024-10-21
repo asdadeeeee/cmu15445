@@ -6,6 +6,7 @@
 #include "catalog/catalog.h"
 #include "catalog/schema.h"
 #include "concurrency/transaction.h"
+#include "concurrency/transaction_manager.h"
 #include "storage/table/tuple.h"
 
 namespace bustub {
@@ -23,7 +24,9 @@ auto CanTupleBeSeen(timestamp_t tuple_ts, Transaction *txn) -> bool;
 auto CollectUndoLogs(const TupleMeta &base_meta, TransactionManager *txn_mgr, Transaction *curr_trx, RID rid)
     -> std::vector<UndoLog>;
 
-auto IsWriteWriteConflict(std::optional<UndoLink> /*unused*/) -> bool;
+auto IsWriteWriteConflict(std::optional<VersionUndoLink> version_link) -> bool;
+
+auto ConstructUndoLogFromBase(TableInfo *table_info, TransactionManager *txn_mgr, RID rid) -> UndoLog;
 // Add new functions as needed... You are likely need to define some more functions.
 //
 // To give you a sense of what can be shared across executors / transaction manager, here are the

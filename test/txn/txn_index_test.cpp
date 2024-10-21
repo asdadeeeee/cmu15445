@@ -83,7 +83,7 @@ TEST(TxnIndexTest, IndexInsertTest) {  // NOLINT
                                 }));
 }
 
-TEST(TxnIndexTest, DISABLED_InsertDeleteTest) {  // NOLINT
+TEST(TxnIndexTest, InsertDeleteTest) {  // NOLINT
   const std::string query = "SELECT * FROM maintable";
 
   auto bustub = std::make_unique<BustubInstance>();
@@ -115,7 +115,7 @@ TEST(TxnIndexTest, DISABLED_InsertDeleteTest) {  // NOLINT
                                     IntResult{{1, 0}, {2, 0}, {3, 0}, {4, 0}}));
 }
 
-TEST(TxnIndexTest, DISABLED_UpdateTest) {  // NOLINT
+TEST(TxnIndexTest, UpdateTest) {  // NOLINT
   const std::string query = "SELECT * FROM maintable";
 
   const auto prepare =

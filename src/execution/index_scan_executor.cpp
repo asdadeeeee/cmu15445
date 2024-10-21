@@ -12,6 +12,7 @@
 #include "execution/executors/index_scan_executor.h"
 #include "common/config.h"
 #include "common/rid.h"
+#include "execution/execution_common.h"
 #include "type/value_factory.h"
 namespace bustub {
 IndexScanExecutor::IndexScanExecutor(ExecutorContext *exec_ctx, const IndexScanPlanNode *plan)
@@ -37,28 +38,61 @@ void IndexScanExecutor::Init() {
     htable_->ScanKey(key, &rids_, exec_ctx_->GetTransaction());
   }
   index_iter_ = rids_.begin();
+  txn_ = exec_ctx_->GetTransaction();
+  txn_mgr_ = exec_ctx_->GetTransactionManager();
 }
 
 auto IndexScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   while (index_iter_ != rids_.end()) {
     auto tuple_pair = table_info_->table_->GetTuple(*index_iter_);
-    if (tuple_pair.first.is_deleted_) {
+    // if(tuple_pair.first.ts_)
+    std::vector<UndoLog> undologs = CollectUndoLogs(tuple_pair.first, txn_mgr_, txn_, *index_iter_);
+    auto temp_tuple = ReconstructTuple(&GetOutputSchema(), tuple_pair.second, tuple_pair.first, undologs);
+    if (!temp_tuple.has_value()) {
       index_iter_++;
       continue;
     }
+    // if (tuple_pair.first.is_deleted_) {
+    //   ++(*table_iter_);
+    //   continue;
+    // }
+    // 添加predicate
     if (plan_->filter_predicate_ != nullptr) {
-      auto value = plan_->filter_predicate_->Evaluate(&tuple_pair.second, GetOutputSchema());
+      auto value = plan_->filter_predicate_->Evaluate(&temp_tuple.value(), GetOutputSchema());
       if (!value.IsNull() && !value.GetAs<bool>()) {
         index_iter_++;
         continue;
       }
     }
-    *tuple = Tuple(tuple_pair.second);
+    *tuple = Tuple(std::move(temp_tuple.value()));
     *rid = RID(index_iter_->GetPageId(), index_iter_->GetSlotNum());
     index_iter_++;
     return true;
   }
   return false;
 }
+
+// P3
+// auto IndexScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
+//   while (index_iter_ != rids_.end()) {
+//     auto tuple_pair = table_info_->table_->GetTuple(*index_iter_);
+//     if (tuple_pair.first.is_deleted_) {
+//       index_iter_++;
+//       continue;
+//     }
+//     if (plan_->filter_predicate_ != nullptr) {
+//       auto value = plan_->filter_predicate_->Evaluate(&tuple_pair.second, GetOutputSchema());
+//       if (!value.IsNull() && !value.GetAs<bool>()) {
+//         index_iter_++;
+//         continue;
+//       }
+//     }
+//     *tuple = Tuple(tuple_pair.second);
+//     *rid = RID(index_iter_->GetPageId(), index_iter_->GetSlotNum());
+//     index_iter_++;
+//     return true;
+//   }
+//   return false;
+// }
 
 }  // namespace bustub

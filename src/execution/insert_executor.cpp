@@ -15,6 +15,8 @@
 
 #include "common/rid.h"
 #include "concurrency/transaction.h"
+#include "concurrency/transaction_manager.h"
+#include "execution/execution_common.h"
 #include "execution/executors/insert_executor.h"
 #include "storage/table/tuple.h"
 #include "type/type.h"
@@ -53,31 +55,52 @@ auto InsertExecutor::Next(Tuple *tuple, RID *rid) -> bool {
       exist_rids.clear();
       index->index_->ScanKey(index_tuple, &exist_rids, txn_);
       if (!exist_rids.empty()) {
-        // UndoInsert(temp_inserted_rids);
-        txn_->SetTainted();
-        throw bustub::ExecutionException("insert failed exist duplicate index before make heap tuple");
-        return false;
-      }
-    }
-
-    // TupleMeta insert_tuple_meta{INVALID_TS, false};
-    TupleMeta insert_tuple_meta{txn_->GetTransactionTempTs(), false};
-    auto inserted_rid = table_info->table_->InsertTuple(insert_tuple_meta, insert_tuple, exec_ctx_->GetLockManager(),
-                                                        exec_ctx_->GetTransaction(), insert_table_oid);
-    if (!inserted_rid.has_value()) {
-      UndoInsert(temp_inserted_rids);
-      throw bustub::Exception("insert failed has no empty space");
-      return false;
-    }
-    temp_inserted_rids.emplace_back(inserted_rid.value());
-    for (auto &index : table_indexs) {
-      Tuple index_tuple =
-          insert_tuple.KeyFromTuple(table_info->schema_, index->key_schema_, index->index_->GetKeyAttrs());
-      if (!index->index_->InsertEntry(index_tuple, inserted_rid.value(), exec_ctx_->GetTransaction())) {
-        // UndoInsert(temp_inserted_rids);
-        txn_->SetTainted();
-        throw bustub::ExecutionException("insert failed exist duplicate index when insert index after make heap tuple");
-        return false;
+        auto index_iter = exist_rids.begin();
+        while (index_iter != exist_rids.end()) {
+          auto tuple_pair = table_info->table_->GetTuple(*index_iter);
+          if (tuple_pair.first.is_deleted_ && CanTupleBeSeen(tuple_pair.first.ts_, txn_)) {
+            if (tuple_pair.first.ts_ != txn_->GetTransactionTempTs()) {
+              auto undo_log = ConstructUndoLogFromBase(table_info, txn_mgr_, *index_iter);
+              auto undo_link = txn_->AppendUndoLog(undo_log);
+              if (!txn_mgr_->UpdateVersionLink(*index_iter, VersionUndoLink{undo_link, true})) {
+                txn_->SetTainted();
+                throw bustub::ExecutionException("insert failed write conflict");
+                return false;
+              }
+            }
+            TupleMeta update_tuple_meta{txn_->GetTransactionTempTs(), false};
+            table_info->table_->UpdateTupleInPlace(update_tuple_meta, insert_tuple, *index_iter);
+            temp_inserted_rids.emplace_back(*index_iter);
+            index_iter++;
+          } else {
+            txn_->SetTainted();
+            throw bustub::ExecutionException("insert failed exist duplicate index before make heap tuple");
+            return false;
+          }
+        }
+      } else {
+        // TupleMeta insert_tuple_meta{INVALID_TS, false};
+        TupleMeta insert_tuple_meta{txn_->GetTransactionTempTs(), false};
+        auto inserted_rid =
+            table_info->table_->InsertTuple(insert_tuple_meta, insert_tuple, exec_ctx_->GetLockManager(),
+                                            exec_ctx_->GetTransaction(), insert_table_oid);
+        if (!inserted_rid.has_value()) {
+          UndoInsert(temp_inserted_rids);
+          throw bustub::Exception("insert failed has no empty space");
+          return false;
+        }
+        temp_inserted_rids.emplace_back(inserted_rid.value());
+        for (auto &index : table_indexs) {
+          Tuple index_tuple =
+              insert_tuple.KeyFromTuple(table_info->schema_, index->key_schema_, index->index_->GetKeyAttrs());
+          if (!index->index_->InsertEntry(index_tuple, inserted_rid.value(), exec_ctx_->GetTransaction())) {
+            // UndoInsert(temp_inserted_rids);
+            txn_->SetTainted();
+            throw bustub::ExecutionException(
+                "insert failed exist duplicate index when insert index after make heap tuple");
+            return false;
+          }
+        }
       }
     }
   }

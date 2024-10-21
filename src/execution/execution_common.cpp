@@ -168,5 +168,17 @@ auto CollectUndoLogs(const TupleMeta &base_meta, TransactionManager *txn_mgr, Tr
   return undo_logs;
 }
 
-auto IsWriteWriteConflict(std::optional<UndoLink> /*unused*/) -> bool { return true; }
+auto IsWriteWriteNotConflict(std::optional<VersionUndoLink> version_link) -> bool {
+  return !(version_link.has_value() && version_link->in_progress_);
+}
+
+auto ConstructUndoLogFromBase(TableInfo *table_info, TransactionManager *txn_mgr, RID rid) -> UndoLog {
+  auto pair = table_info->table_->GetTuple(rid);
+  std::vector<bool> modified_fields(table_info->schema_.GetColumnCount(), true);
+  auto pre_undo_link = txn_mgr->GetUndoLink(rid);
+  if (!(pre_undo_link.has_value() && pre_undo_link->IsValid())) {
+    pre_undo_link = UndoLink{};
+  }
+  return UndoLog{pair.first.is_deleted_, std::move(modified_fields), pair.second, pair.first.ts_, *pre_undo_link};
+}
 }  // namespace bustub

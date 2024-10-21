@@ -55,14 +55,8 @@ auto DeleteExecutor::Next(Tuple *tuple, RID *rid) -> bool {
 
     // 如果ts不等 说明该txn_没有修改过这个tuple，那么需要构造undo,并update
     if (base_meta.ts_ != txn_->GetTransactionTempTs()) {
-      std::vector<bool> modified_fields(table_info->schema_.GetColumnCount(), true);
-      auto pre_undo_link = txn_mgr_->GetUndoLink(delete_rid);
-      if (!(pre_undo_link.has_value() && pre_undo_link->IsValid())) {
-        pre_undo_link = UndoLink{};
-      }
-
-      auto undo_link = txn_->AppendUndoLog(
-          {UndoLog{false, std::move(modified_fields), delete_tuple, base_meta.ts_, *pre_undo_link}});
+      auto undo_log = ConstructUndoLogFromBase(table_info, txn_mgr_, delete_rid);
+      auto undo_link = txn_->AppendUndoLog(undo_log);
       txn_mgr_->UpdateUndoLink(delete_rid, undo_link);
     } else {
       auto pre_undo_link = txn_mgr_->GetUndoLink(delete_rid);
@@ -92,12 +86,13 @@ auto DeleteExecutor::Next(Tuple *tuple, RID *rid) -> bool {
       }
     }
 
+    // MVCC中保留索引
     // 索引删除
-    for (auto &index : table_indexs) {
-      Tuple index_tuple =
-          delete_tuple.KeyFromTuple(table_info->schema_, index->key_schema_, index->index_->GetKeyAttrs());
-      index->index_->DeleteEntry(index_tuple, delete_rid, exec_ctx_->GetTransaction());
-    }
+    // for (auto &index : table_indexs) {
+    //   Tuple index_tuple =
+    //       delete_tuple.KeyFromTuple(table_info->schema_, index->key_schema_, index->index_->GetKeyAttrs());
+    //   index->index_->DeleteEntry(index_tuple, delete_rid, exec_ctx_->GetTransaction());
+    // }
 
     // heap删除
     TupleMeta delete_tuple_meta{txn_->GetTransactionTempTs(), true};

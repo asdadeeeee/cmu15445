@@ -50,5 +50,7 @@ class IndexScanExecutor : public AbstractExecutor {
   std::vector<RID> rids_;
   std::vector<RID>::iterator index_iter_;
   bool if_init_ = false;
+  TransactionManager *txn_mgr_;
+  Transaction *txn_;
 };
 }  // namespace bustub

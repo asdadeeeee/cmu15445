@@ -66,7 +66,7 @@ auto UpdateExecutor::Next(Tuple *tuple, RID *rid) -> bool {
       const auto &expr = plan_->target_expressions_[i];
       Value value = expr->Evaluate(&child_iter->second, table_info_->schema_);
       if (value.GetTypeId() != table_info_->schema_.GetColumn(i).GetType()) {
-        UndoUpdate(temp_update_old_new_rids);
+        // UndoUpdate(temp_update_old_new_rids);
         throw bustub::Exception("update table schema mismatch");
       }
       all_values.push_back(value);
@@ -75,7 +75,7 @@ auto UpdateExecutor::Next(Tuple *tuple, RID *rid) -> bool {
 
     // 如果ts不等 说明该txn_没有修改过这个tuple，那么需要重新构造undo并append updateundolink
     // 否则两种情况，
-    // 一种是新增的uncommited tuple，这种没有undolink
+    // **TODO 一种是新增的uncommited tuple，这种也可能会有undolink （index insert）
     // 一种是uncommited updated tuple，这种必然有undolog且为最新的,并在该条undolog上修改 用ModifyUndoLog
     if (!IsTupleContentEqual(new_tuple, child_iter->second)) {
       if (base_meta.ts_ != txn_->GetTransactionTempTs()) {
@@ -129,7 +129,8 @@ auto UpdateExecutor::Next(Tuple *tuple, RID *rid) -> bool {
           }
           auto undo_schema = ConstructUndoLogSchema(schema_ptr, modified_fields);
           Tuple undo_tuple{old_values, &undo_schema};
-          UndoLog undolog{false, std::move(modified_fields), undo_tuple, pre_undo_log.ts_, pre_undo_log.prev_version_};
+          UndoLog undolog{pre_undo_log.is_deleted_, std::move(modified_fields), undo_tuple, pre_undo_log.ts_,
+                          pre_undo_log.prev_version_};
           txn_->ModifyUndoLog(pre_undo_link->prev_log_idx_, undolog);
         }
       }
